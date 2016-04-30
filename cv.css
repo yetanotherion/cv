@@ -1,0 +1,22 @@
+.name {
+    text-align: center;
+}
+.position {
+    text-align: center;
+}
+
+.big-border-bottom {
+    border-bottom: 3px solid;
+}
+
+.section {
+    border-bottom: 1px;
+}
+
+.picture {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 150px;
+    height: auto;
+}
