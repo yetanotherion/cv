@@ -5,7 +5,8 @@ let get_element_by_id id =
   Js.Opt.get (Dom_html.document##getElementById(Js.string id))
              (fun () -> assert false)
 
-type t = unit
+
+type t = {more_about_intel: bool}
 type rs = t React.signal
 type rf = ?step:React.step -> t -> unit
 type rp = rs * rf
@@ -93,17 +94,100 @@ let compute_information () =
             ~alt:"Picture not available"
             ()]]
 
-let compute_intel () =
+let setup_handler f model div new_state =
+  let onclick () =
+    let () = f ({model with more_about_intel=new_state}) in
+    Lwt.return_unit
+  in
+  Lwt_js_events.(async (fun () -> clicks
+                                    (Tyxml_js.To_dom.of_div div)
+                                    (fun _ _ -> onclick ())))
+let compute_intel_content f model =
+  let curr_class =
+    if model.more_about_intel then
+      "arrow-down"
+    else "arrow-right"
+  in
+  let new_div = div ~a:[a_class [curr_class]] [] in
+  let () = setup_handler f model new_div (not model.more_about_intel) in
+  let other =
+    if model.more_about_intel then
+      [ul [
+           li [pcdata "Unreliable tests:";
+               ul [li [pcdata "Algorithm to \
+                               measure and detect unreliable verdicts."];
+                   li [pcdata "Design and implement an automated test \
+                               quarantine system (+50% on reliability)."]
+                  ]
+              ];
+           li [pcdata "Dynamic scheduling:";
+               ul [li [pcdata "Automate the identification and \
+                               integration of reverts, fixing \
+                               regressions by processing \
+                               unreliable test results (referred as \
+                               'fast_revert')."];
+                   li [pcdata "Algorithm to decide when \
+                               'fast_revert' should be used \
+                               over the 'wait for the test result \
+                               before integration' strategy ";
+                       pcdata "(+25% on integration speed)."]]];
+           li [pcdata "Implementation: ";
+               hyperlink "https://www.python.org/"
+                         "Python";
+               pcdata " (";
+               hyperlink "http://flask.pocoo.org/"
+                         "Flask";
+               pcdata ", ";
+               hyperlink "https://twistedmatrix.com/"
+                         "Twisted";
+               pcdata "), ";
+               hyperlink "https://www.rabbitmq.com/"
+                         "RabbitMQ";
+               pcdata ", ";
+               hyperlink "https://www.docker.com/"
+                         "Docker";
+               pcdata ", ";
+               hyperlink "http://buildbot.net/"
+                         "Buildbot";
+               pcdata ", ";
+               hyperlink "https://www.cloudfoundry.org/"
+                         "Cloudfoundry";
+               pcdata ", ";
+               hyperlink "http://microservices.io/patterns/microservices.html"
+                         "Micro service architecture";
+               pcdata ", ";
+               hyperlink "https://www.mysql.com/"
+                         "MySQL";
+               pcdata ", ";
+               hyperlink "https://github.com/d3"
+                         "d3";
+               pcdata ", ";
+               hyperlink "https://angularjs.org/"
+                         "angularjs";
+               pcdata "."]
+         ]
+      ]
+    else []
+  in
+  new_div, other
+
+
+let compute_intel f model =
+  let before, after = compute_intel_content f model in
+  let content =
+    [pcdata "Leading Test Scheduling Efficiency \
+                   in the Continuous \
+                   Integration engine of Intel inside Android software "]
+    @ (before :: after) in
   [half_col_div_section
      [p [strong [pcdata "2012 - nowadays"];
          br ();
          strong [hyperlink "https://01.org/"
                            "INTEL / SSG / OTC"]]];
-   half_col_div_section
-       [p [pcdata "Leading Test Scheduling Efficiency \
-                   in the Continuous \
-                   Integration engine of Intel inside Android software
-                   (python/angularjs/coffeescript/dc/d3/java)."]]]
+   half_col_div_section content
+  ]
+
+
 let compute_celad () =
   [half_col_div_section
      [p [strong [pcdata "2011 - Short missions";
@@ -166,10 +250,10 @@ let compute_laas () =
   ]
 
 
-let compute_profesional_experience () =
+let compute_profesional_experience f model =
   let content = (List.map
                    (fun x -> full_col_div x)
-                   [compute_intel ();
+                   [compute_intel f model;
                     compute_celad ();
                     compute_laas ()]) in
   let header = full_col_div [half_col_div
@@ -188,7 +272,7 @@ let compute_languages () =
      pcdata ": mother language.";
      br ();
      strong [pcdata "Russian"];
-     pcdata ": begginer."]
+     pcdata ": beginner."]
 
 
 let compute_extra_curricular_activities () =
@@ -204,7 +288,10 @@ let compute_extra_curricular_activities () =
      hyperlink "https://www.youtube.com/watch?v=PnqLYlcRwwc"
                "Collaboration";
      pcdata " with a professional \
-             contemporary dance company.";
+             contemporary dance ";
+     hyperlink "http://www.elirale.org/fr/home/"
+               "company";
+     pcdata ".";
      br ();
      strong [pcdata "Trips"];
      pcdata ": England, Italy, Spain, \
@@ -222,7 +309,7 @@ let compute_bottom () =
 let compute_view f model =
   div [compute_header ();
        compute_information ();
-       compute_profesional_experience ();
+       compute_profesional_experience f model;
        compute_bottom ();
       ]
 
@@ -235,7 +322,8 @@ let _ =
   Lwt.bind
     (Lwt_js_events.onload ())
     (fun _ ->
-     let r, f = React.S.create () in
+     let more_about_intel = false in
+     let r, f = React.S.create {more_about_intel} in
      let content = get_element_by_id "content" in
      let under_content = view (r, f) in
      let () =
