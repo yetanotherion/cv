@@ -591,53 +591,33 @@ let create_animation animation_duration seconds_to_read_text sleep dims margin =
                                  [] (range 0 (int_of_float number_points)) in
   let last = List.hd animation in
   let number_points = seconds_to_read_text /. sleep in
-  let create_msg_text idx =
-    let msg =
-      ["The source code was lost somewhere in the net.";
-       "(Github didn't exist yet :S).";
-       "Please find above a link to an article (in french)."]
-    in
-    let msg_lengths = List.map (String.length) msg in
-    let num_letters = List.fold_left (fun accum x -> accum + x) 0 msg_lengths in
+  let create_msg_text msg =
+    let num_letters = String.length msg in
     let each_points = (int_of_float number_points) / num_letters in
+    fun idx ->
     let msg_len = min (idx / each_points) num_letters in
-    let msg_idxes = List.fold_left (fun accum x ->
-                                    match accum with
-                                    | [] -> [(0, 0, String.length x)]
-                                    | hd :: tl ->
-                                       let idx, _, previous_idx = hd in
-                                       (idx + 1,
-                                        previous_idx,
-                                        (String.length x) +
-                                          previous_idx)
-                                       :: accum)
-                                   [] msg
-    in
-    let msg_idxes = List.rev msg_idxes in
-    let idx, len, _ = List.fold_left (fun accum x ->
-                                      let idx, len, found = accum in
-                                      if found then accum
-                                      else
-                                        let idx, curr_start, curr_end = x in
-                                        if (msg_len >= curr_start &&
-                                              msg_len <= curr_end)
-                                        then
-                                          (idx, msg_len - curr_start, true)
-                                        else accum)
-                                     (-1, -1, false) msg_idxes
-    in
-    create_text 0.0 0.0 (String.sub (List.nth msg idx) 0 len)
+    create_text 0.0 0.0 (String.sub msg 0 msg_len)
   in
-  let msg_animation = List.fold_left (fun accum idx ->
-                                      let new_elt =
-                                        {last with msg=Some
-                                                         (create_msg_text idx)}
-                                      in
-                                      new_elt :: accum)
-                                     [] (range 0 (int_of_float number_points))
+  let messages =
+    ["The source code was lost somewhere in the net.";
+     "(Github didn't exist yet :S).";
+     "Please find above a link to an article (in french)."]
   in
+  let make_msg_animation msg =
+    let f = create_msg_text msg in
+    List.rev (List.fold_left (fun accum idx ->
+                              let new_elt =
+                                {last with msg=Some (f idx)}
+                              in
+                              new_elt :: accum)
+                             [] (range 0 (int_of_float number_points)))
+  in
+  let flatten ll = List.fold_left (fun accum l -> accum @ l) [] ll in
   Animation.create dims margin sleep ((List.rev animation) @
-                                        (List.rev msg_animation))
+                                        (flatten
+                                           (List.map
+                                              make_msg_animation
+                                              messages)))
 let _ =
   let dims = Animation.({width=400; height=100}) in
   let margin = Animation.({top=30; right=20;
@@ -649,7 +629,7 @@ let _ =
          more_about_cda,
          animation = false, false, create_animation
                                      1.0
-                                     3.5
+                                     0.1
                                      0.01 dims margin in
      let r, f = React.S.create {more_about_test_efficiency; more_about_cda;
                                 animation} in
