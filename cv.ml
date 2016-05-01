@@ -6,7 +6,9 @@ let get_element_by_id id =
              (fun () -> assert false)
 
 
-type t = {more_about_intel: bool}
+type t = {more_about_test_efficiency: bool;
+          more_about_cda: bool}
+
 type rs = t React.signal
 type rf = ?step:React.step -> t -> unit
 type rp = rs * rf
@@ -23,6 +25,7 @@ let hyperlink link name =
   a ~a:[a_href link] [pcdata name]
 
 let quarter_col_div x = div ~a:[a_class ["col-sm-3"]] x
+let third_col_div x = div ~a:[a_class ["col-sm-4"]] x
 let full_col_div x = div ~a:[a_class ["col-sm-12"]] x
 
 let compute_header () =
@@ -32,95 +35,106 @@ let compute_header () =
        h2 ~a:[a_class ["position"]]
            [strong [pcdata "Software Engineer"]]]
 
+let compute_open_source () =
+  [pcdata "Open source contributions: ";
+   ul [li [strong [pcdata "Python: "];
+           hyperlink "https://github.com/buildbot/buildbot"
+                     "buildbot";
+          ];
+       li [strong [pcdata "OCaml"];
+           pcdata ": ";
+           ul
+             [
+               li [pcdata "Facebook events' audience analysis: ";
+                   hyperlink "https://vimeo.com/121533725"
+                             "demo";
+                   pcdata " ";
+                   hyperlink
+                     "https://github.com/yetanotherion/eliom_and_facebook"
+                     "(src)";
+                  ];
+               li [pcdata "Games to learn languages: ";
+                   hyperlink "http://www.languagames.com/hiztegia"
+                             "collaborative dictionary";
+                   pcdata ", ";
+                   hyperlink "http://www.languagames.com/eus_taulak"
+                             "animated verbs";
+                   pcdata " ";
+                   hyperlink "https://github.com/yetanotherion/hizkuntzak"
+                             "(src)";
+                  ]]];
+       li [strong [pcdata "C"];
+           pcdata ": Linux rootkit ";
+           hyperlink "https://www.sstic.org/2005/\
+                      presentation/UberLogger_un_\
+                      observatoire_niveau_noyau_pour_\
+                      la_lutte_informative_defensive/"
+                     "(fr)";
+          ]
+      ]
+  ]
+
+let compute_contact () =
+  [pcdata "Tel: +33 6 75 86 27 27";
+   br ();
+   pcdata "Mail: ";
+   hyperlink "mailto:nolaridegi@gmail.com"
+             "nolaridebi@gmail.com";
+   br ();
+   pcdata "Github: ";
+   hyperlink "https://github.com/yetanotherion"
+             "yetanotherion";
+   br ();
+   pcdata "Researchgate: ";
+   a ~a:[a_href "https://www.researchgate.net/profile/Ion_Alberdi"]
+     [pcdata "Ion Alberdi"];
+  ]
 let compute_information () =
-
   full_col_div
-    [half_col_div
-       [pcdata "Tel: +33 6 75 86 27 27";
-        br ();
-        pcdata "Mail: ";
-        hyperlink "mailto:nolaridegi@gmail.com"
-                  "nolaridebi@gmail.com";
-        br ();
-        pcdata "Github: ";
-        hyperlink "https://github.com/yetanotherion"
-                  "yetanotherion";
-        br ();
-        pcdata "Researchgate: ";
-        a ~a:[a_href "https://www.researchgate.net/profile/Ion_Alberdi"]
-          [pcdata "Ion Alberdi"];
-        br ();
-        pcdata "Open source: ";
-        ul [li [strong [pcdata "Python: "];
-                hyperlink "https://github.com/buildbot/buildbot"
-                          "buildbot";
-               ];
-            li [strong [pcdata "OCaml"];
-                pcdata ": ";
-                ul
-                  [
-                    li [pcdata "Facebook events' audience analysis: ";
-                        hyperlink "https://vimeo.com/121533725"
-                                  "demo";
-                        pcdata " ";
-                        hyperlink
-                          "https://github.com/yetanotherion/eliom_and_facebook"
-                          "(src)";
-                       ];
-                    li [pcdata "Games to learn languages: ";
-                        hyperlink "http://www.languagames.com/hiztegia"
-                                  "collaborative dictionary";
-                        pcdata ", ";
-                        hyperlink "http://www.languagames.com/eus_taulak"
-                                  "animated verbs";
-                        pcdata " ";
-                        hyperlink "https://github.com/yetanotherion/hizkuntzak"
-                                  "(src)";
-                       ]]];
+    [quarter_col_div (compute_contact ());
+     div ~a:[a_class ["col-sm-6"]] (compute_open_source ());
+     quarter_col_div [img ~a:[a_class ["picture"; "center-block"]]
+                          ~src:(uri_of_string "photo.jpg")
+                          ~alt:"Picture not available"
+                          ()]]
 
-            li [strong [pcdata "C"];
-                pcdata ": Linux rootkit ";
-                hyperlink "https://www.sstic.org/2005/\
-                           presentation/UberLogger_un_\
-                           observatoire_niveau_noyau_pour_\
-                           la_lutte_informative_defensive/"
-                          "(fr)";
-               ]]
-       ];
-
-     half_col_div
-       [img ~a:[a_class ["picture"]]
-            ~src:(uri_of_string "photo.jpg")
-            ~alt:"Picture not available"
-            ()]]
-
-let setup_handler f model div new_state =
+let setup_handler f model div update_model =
   let onclick () =
-    let () = f ({model with more_about_intel=new_state}) in
+    let () = f (update_model model) in
     Lwt.return_unit
   in
   Lwt_js_events.(async (fun () -> clicks
                                     (Tyxml_js.To_dom.of_div div)
                                     (fun _ _ -> onclick ())))
-let compute_intel_content f model =
+
+let create_div collapsed =
   let curr_class =
-    if model.more_about_intel then
+    if collapsed then
       "arrow-down"
     else "arrow-right"
   in
-  let new_div = div ~a:[a_class [curr_class]] [] in
-  let () = setup_handler f model new_div (not model.more_about_intel) in
+  div ~a:[a_class [curr_class]] []
+
+let compute_test_efficiency_content f model =
+  let new_div = create_div model.more_about_test_efficiency in
+  let () = setup_handler f model new_div
+                         (fun model ->
+                          let new_state =
+                            not model.more_about_test_efficiency in
+                          {model with more_about_test_efficiency=new_state}) in
   let other =
-    if model.more_about_intel then
+    if model.more_about_test_efficiency then
       [ul [
-           li [pcdata "Unreliable tests:";
+           li [strong [pcdata "Handling unreliable tests"];
+               pcdata ":";
                ul [li [pcdata "Algorithm to \
                                measure and detect unreliable verdicts."];
                    li [pcdata "Design and implement an automated test \
                                quarantine system (+50% on reliability)."]
                   ]
               ];
-           li [pcdata "Dynamic scheduling:";
+           li [strong [pcdata "Dynamic scheduling"];
+               pcdata ":";
                ul [li [pcdata "Automate the identification and \
                                integration of reverts, fixing \
                                regressions by processing \
@@ -131,7 +145,8 @@ let compute_intel_content f model =
                                over the 'wait for the test result \
                                before integration' strategy ";
                        pcdata "(+25% on integration speed)."]]];
-           li [pcdata "Implementation: ";
+           li [strong [pcdata "Implementation"];
+               pcdata ": ";
                hyperlink "https://www.python.org/"
                          "Python";
                pcdata " (";
@@ -172,18 +187,81 @@ let compute_intel_content f model =
   new_div, other
 
 
-let compute_intel f model =
-  let before, after = compute_intel_content f model in
+let compute_test_efficiency f model =
+  let before, after = compute_test_efficiency_content f model in
   let content =
     [pcdata "Leading Test Scheduling Efficiency \
                    in the Continuous \
                    Integration engine of Intel inside Android software "]
     @ (before :: after) in
   [half_col_div_section
-     [p [strong [pcdata "2012 - nowadays"];
+     [p [strong [pcdata "2015 - nowadays"];
          br ();
          strong [hyperlink "https://01.org/"
                            "INTEL / SSG / OTC"]]];
+   half_col_div_section content
+  ]
+
+let compute_cda_content f model =
+let new_div = create_div model.more_about_cda in
+  let () = setup_handler f model new_div
+                         (fun model ->
+                          let new_state =
+                            not model.more_about_cda in
+                          {model with more_about_cda=new_state}) in
+  let other =
+    if model.more_about_cda then
+      [ul [
+           li [strong [pcdata "Upstream-compliance"];
+               pcdata ": ";
+               pcdata "Automate the generation, validation and integration of ";
+               pcdata "software to be used in both upstream and local \
+                       branches. "];
+           li [strong [pcdata "CI interconnexion"];
+               pcdata ": ";
+               pcdata "Automate the generation, validation and integration of \
+                       git ";
+               hyperlink "https://git-scm.com/docs/git-merge"
+                         "merge-commit";
+               pcdata "-s in different ";
+               hyperlink "https://www.gerritcodereview.com/"
+                         "gerrit";
+               pcdata " server/branches."];
+           li [strong [pcdata "Scaling"];
+               pcdata ": ";
+               pcdata "Parallelize Android build scheduling. \
+                       (Scaled up to 20 ";
+               hyperlink "https://source.android.com/source/\
+                          building.html"
+                         "Android targets";
+               pcdata " in parallel per up to 10 supported branches."
+              ];
+           li [strong [pcdata "Implementation"];
+               pcdata ": ";
+               hyperlink "https://www.python.org/"
+                         "Python";
+               pcdata ", ";
+               hyperlink "http://buildbot.net/"
+                         "Buildbot";
+               pcdata "."
+              ]
+         ]
+      ]
+    else []
+  in
+  new_div, other
+
+let compute_cda f model =
+  let before, after = compute_cda_content f model in
+  let content =
+    [pcdata "Senior Software Developer in the Scrum team of the \
+             Continuous Integration engine of Intel inside Android software "]
+    @ (before :: after) in
+  [half_col_div_section
+     [p [strong [pcdata "2012 - 2015"];
+         br ();
+         strong [hyperlink "https://www.intel.com/"
+                           "INTEL / MCG"]]];
    half_col_div_section content
   ]
 
@@ -249,11 +327,11 @@ let compute_laas () =
        ]
   ]
 
-
 let compute_profesional_experience f model =
   let content = (List.map
                    (fun x -> full_col_div x)
-                   [compute_intel f model;
+                   [compute_test_efficiency f model;
+                    compute_cda f model;
                     compute_celad ();
                     compute_laas ()]) in
   let header = full_col_div [half_col_div
@@ -322,8 +400,8 @@ let _ =
   Lwt.bind
     (Lwt_js_events.onload ())
     (fun _ ->
-     let more_about_intel = false in
-     let r, f = React.S.create {more_about_intel} in
+     let more_about_test_efficiency, more_about_cda = false, false in
+     let r, f = React.S.create {more_about_test_efficiency; more_about_cda} in
      let content = get_element_by_id "content" in
      let under_content = view (r, f) in
      let () =
