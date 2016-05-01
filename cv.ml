@@ -5,9 +5,53 @@ let get_element_by_id id =
   Js.Opt.get (Dom_html.document##getElementById(Js.string id))
              (fun () -> assert false)
 
+module Animation = struct
+    type dims = { width: int; height: int }
+    type margin = {top: int; right: int;
+                   bottom: int; left: int}
+
+    type state = [`None | `Begin | `End]
+    type coord = {x: float;
+                  y: float}
+    let coord x y = {x; y}
+    type text = {content: string;
+                 pos: coord}
+    let create_text x y content =
+      let pos = coord x y in
+      {pos; content}
+
+    type year_text = {year: text;
+                      label: text}
+    type draw = {line_position: coord;
+                 uberlogger: year_text option;
+                 github: year_text option;
+                 msg: text option}
+    type t = {state: state;
+              draw: draw list;
+              sleep: float;
+              dims: dims;
+              margin: margin}
+
+    let shift_draw t =
+      match t.draw with
+      | [] | _ :: []-> {t with state=`End}
+      (*| [] -> {t with state=`End}
+      | hd :: [] -> {t with draw=[hd]}*)
+      | _ :: tl -> {t with draw=tl}
+
+    let curr_draw t = List.hd t.draw
+    let start_animation t = {t with state=`Begin}
+    let create dims margin sleep to_draw =
+      {state=`None;
+       draw=to_draw;
+       sleep=sleep;
+       dims=dims;
+       margin=margin}
+end
 
 type t = {more_about_test_efficiency: bool;
-          more_about_cda: bool}
+          more_about_cda: bool;
+          animation: Animation.t}
 
 type rs = t React.signal
 type rf = ?step:React.step -> t -> unit
@@ -35,11 +79,100 @@ let compute_header () =
        h2 ~a:[a_class ["position"]]
            [strong [pcdata "Software Engineer"]]]
 
-let compute_open_source () =
+let create_svg f model =
+  let open Animation in
+  let animation = model.animation in
+  let dims, margin = animation.dims,
+                     animation.margin in
+  let curr_draw = curr_draw animation in
+  let create_line x1 x2 y1 y2 =
+    Tyxml_js.Svg.(line ~a:[a_x1 (x1, None);
+                           a_x2 (x2, None);
+                           a_y1 (y1, None);
+                           a_y2 (y2, None);
+                           a_style "opacity: 1;"]
+                       [])
+  in
+  let lines =
+    let line_x = curr_draw.line_position.x in
+    let line_y = curr_draw.line_position.y in
+    let arrow_delta = 7.0 in
+    [create_line 0.0 line_x line_y line_y;
+     create_line (line_x -. arrow_delta)
+                 (line_x)
+                 (line_y +. arrow_delta) line_y;
+     create_line (line_x -. arrow_delta)
+                 line_x
+                 (line_y -. arrow_delta) line_y]
+  in
+  let create_text_svg ?anchor:(anchor=`Middle) txt =
+    Tyxml_js.Svg.(text ~a:[a_text_anchor anchor;
+                           a_x_list [(txt.pos.x, None)];
+                           a_y_list [(txt.pos.y, None)]]
+                       [pcdata txt.content])
+  in
+  let create_milestone mil =
+    match mil with
+    | None -> []
+    | Some x -> [create_text_svg x.year;
+                 create_text_svg x.label;
+                 create_line x.year.pos.x x.year.pos.x
+                             (curr_draw.line_position.y -. 4.0)
+                             (curr_draw.line_position.y +. 4.0)]
+  in
+  let uberlogger = create_milestone curr_draw.uberlogger in
+  let github = create_milestone curr_draw.github in
+  let msg = match curr_draw.msg with
+    | None -> []
+    | Some x -> [create_text_svg ~anchor:`Start x] in
+  let under_g = lines @ uberlogger @ github @ msg in
+  let inside_g = Tyxml_js.Svg.(g ~a:[a_transform
+                                       (Svg_types.Translate
+                                          (float_of_int margin.left,
+                                           Some (float_of_int margin.top)))]
+                                 under_g) in
+
+  let my_svg = Tyxml_js.Html5.(svg ~a:[Tyxml_js.Svg.a_width
+                                         (float_of_int dims.width, None);
+                                       Tyxml_js.Svg.a_height
+                                         (float_of_int dims.height, None)]
+                                   [inside_g]) in
+  let () = Lwt_js_events.(async
+                            (fun () ->
+                             let%lwt () = Lwt_js.sleep animation.sleep in
+                             let () = f ({model with
+                                           animation=shift_draw animation}) in
+                             Lwt.return_unit)) in
+
+  my_svg
+
+let compute_rootkit_animation f model =
+  match Animation.(model.animation.state) with
+  | `End -> [hyperlink "https://www.sstic.org/2005/\
+                        presentation/UberLogger_un_\
+                        observatoire_niveau_noyau_pour_\
+                        la_lutte_informative_defensive/"
+                       "(fr)"]
+  | `None ->
+     let link = hyperlink "" "(src)" in
+     let onmouseover () =
+       let () = f ({model with animation=Animation.(start_animation
+                                                      model.animation)}) in
+       Lwt.return_unit
+     in
+     let () = Lwt_js_events.(async (fun () ->
+                                    mouseovers
+                                      (Tyxml_js.To_dom.of_a link)
+                                      (fun _ _ -> onmouseover ()))) in
+     [link]
+  | `Begin -> [div [create_svg f model]]
+
+
+let compute_open_source f model =
   [pcdata "Open source contributions: ";
    ul [li [strong [pcdata "Python: "];
            hyperlink "https://github.com/buildbot/buildbot"
-                     "buildbot";
+                     "Buildbot";
           ];
        li [strong [pcdata "OCaml"];
            pcdata ": ";
@@ -63,14 +196,9 @@ let compute_open_source () =
                    hyperlink "https://github.com/yetanotherion/hizkuntzak"
                              "(src)";
                   ]]];
-       li [strong [pcdata "C"];
-           pcdata ": Linux rootkit ";
-           hyperlink "https://www.sstic.org/2005/\
-                      presentation/UberLogger_un_\
-                      observatoire_niveau_noyau_pour_\
-                      la_lutte_informative_defensive/"
-                     "(fr)";
-          ]
+       li ([strong [pcdata "C"];
+            pcdata ": Uberlogger, backdoor for Linux 2.4 "] @
+             (compute_rootkit_animation f model))
       ]
   ]
 
@@ -89,10 +217,11 @@ let compute_contact () =
    a ~a:[a_href "https://www.researchgate.net/profile/Ion_Alberdi"]
      [pcdata "Ion Alberdi"];
   ]
-let compute_information () =
+
+let compute_information f model =
   full_col_div
     [quarter_col_div (compute_contact ());
-     div ~a:[a_class ["col-sm-6"]] (compute_open_source ());
+     div ~a:[a_class ["col-sm-6"]] (compute_open_source f model);
      quarter_col_div [img ~a:[a_class ["picture"; "center-block"]]
                           ~src:(uri_of_string "photo.jpg")
                           ~alt:"Picture not available"
@@ -215,7 +344,7 @@ let new_div = create_div model.more_about_cda in
            li [strong [pcdata "Upstream-compliance"];
                pcdata ": ";
                pcdata "Automate the generation, validation and integration of ";
-               pcdata "software to be used in both upstream and local \
+               pcdata "the software to be used in both upstream and local \
                        branches. "];
            li [strong [pcdata "CI interconnexion"];
                pcdata ": ";
@@ -225,12 +354,12 @@ let new_div = create_div model.more_about_cda in
                          "merge-commit";
                pcdata "-s in different ";
                hyperlink "https://www.gerritcodereview.com/"
-                         "gerrit";
+                         "Gerrit";
                pcdata " server/branches."];
            li [strong [pcdata "Scaling"];
                pcdata ": ";
                pcdata "Parallelize Android build scheduling. \
-                       (Scaled up to 20 ";
+                       Scaled up to 20 ";
                hyperlink "https://source.android.com/source/\
                           building.html"
                          "Android targets";
@@ -243,6 +372,9 @@ let new_div = create_div model.more_about_cda in
                pcdata ", ";
                hyperlink "http://buildbot.net/"
                          "Buildbot";
+               pcdata ", ";
+               hyperlink "https://www.jfrog.com/artifactory/"
+                         "Artifactory";
                pcdata "."
               ]
          ]
@@ -386,7 +518,7 @@ let compute_bottom () =
 
 let compute_view f model =
   div [compute_header ();
-       compute_information ();
+       compute_information f model;
        compute_profesional_experience f model;
        compute_bottom ();
       ]
@@ -395,13 +527,132 @@ let view ((r, f): rp) =
   let new_elt = React.S.map (compute_view f) r in
   Tyxml_js.R.Html5.(div (ReactiveData.RList.singleton_s
                            new_elt))
+let range start_idx end_idx =
+  let rec _range accum start_idx end_idx =
+    if start_idx == end_idx then List.rev accum
+    else _range (start_idx :: accum) (start_idx + 1) end_idx
+  in
+  _range [] start_idx end_idx
 
+let create_animation animation_duration seconds_to_read_text sleep dims margin =
+  let open Animation in
+  let line_length = dims.width - margin.left in
+  let date_origin = 2004 in
+  let date_end = 2010 in
+  let date_length = float_of_int (date_end - date_origin) in
+  let compute_date_x date =
+    let delta  = date - date_origin in
+    (float_of_int (delta * line_length)) /. date_length
+  in
+  let number_points = animation_duration /. sleep in
+  let shift_at_each = (float_of_int line_length) /. number_points in
+  let height = dims.height - margin.bottom in
+  let height_f = float_of_int height in
+  let line_height = height_f /. 2.0 in
+  let create_milestone ?ymax:(ymax=height_f -. 5.0) year name =
+    let x = compute_date_x year in
+    let g = 9.91 in
+    let y0 = line_height +. 6.0 in
+    let translate_in_y y = height_f -. y in
+    let translated_y0 = translate_in_y y0 in
+    let v0 = sqrt ((ymax -. y0) *. (g *. 2.0)) in
+    let _y t = translate_in_y (y0 +. v0 *. t -. 0.5 *. g *. t *. t) in
+    let y t =
+      let res = _y (t /. 3.0) in (* slow-down a little *)
+      if res > translated_y0 then translated_y0
+      else res
+    in
+    fun position ->
+    let delta = position -. x in
+    if delta < 0.0 then None
+    else
+      let t = delta /. shift_at_each in
+      let ps = Printf.sprintf in
+      Some {year=create_text
+                   x
+                   (line_height +. 18.0) (ps "%d" year);
+            label=create_text
+                    x
+                    (y t) name}
+  in
+  let uberlogger = create_milestone 2005 "Uberlogger" in
+  let github = create_milestone 2008 "Github" in
+  let animation = List.fold_left (fun accum idx ->
+                                  let new_position = (float_of_int idx) *.
+                                                       shift_at_each in
+                                  let new_elt =
+                                      {line_position=coord new_position
+                                                           line_height;
+                                       uberlogger=uberlogger new_position;
+                                       github=github new_position;
+                                       msg=None;
+                                      } in
+                                  new_elt :: accum)
+                                 [] (range 0 (int_of_float number_points)) in
+  let last = List.hd animation in
+  let number_points = seconds_to_read_text /. sleep in
+  let create_msg_text idx =
+    let msg =
+      ["The source code was lost somewhere in the net.";
+       "(Github didn't exist yet :S).";
+       "Please find above a link to an article (in french)."]
+    in
+    let msg_lengths = List.map (String.length) msg in
+    let num_letters = List.fold_left (fun accum x -> accum + x) 0 msg_lengths in
+    let each_points = (int_of_float number_points) / num_letters in
+    let msg_len = min (idx / each_points) num_letters in
+    let msg_idxes = List.fold_left (fun accum x ->
+                                    match accum with
+                                    | [] -> [(0, 0, String.length x)]
+                                    | hd :: tl ->
+                                       let idx, _, previous_idx = hd in
+                                       (idx + 1,
+                                        previous_idx,
+                                        (String.length x) +
+                                          previous_idx)
+                                       :: accum)
+                                   [] msg
+    in
+    let msg_idxes = List.rev msg_idxes in
+    let idx, len, _ = List.fold_left (fun accum x ->
+                                      let idx, len, found = accum in
+                                      if found then accum
+                                      else
+                                        let idx, curr_start, curr_end = x in
+                                        if (msg_len >= curr_start &&
+                                              msg_len <= curr_end)
+                                        then
+                                          (idx, msg_len - curr_start, true)
+                                        else accum)
+                                     (-1, -1, false) msg_idxes
+    in
+    create_text 0.0 0.0 (String.sub (List.nth msg idx) 0 len)
+  in
+  let msg_animation = List.fold_left (fun accum idx ->
+                                      let new_elt =
+                                        {last with msg=Some
+                                                         (create_msg_text idx)}
+                                      in
+                                      new_elt :: accum)
+                                     [] (range 0 (int_of_float number_points))
+  in
+  Animation.create dims margin sleep ((List.rev animation) @
+                                        (List.rev msg_animation))
 let _ =
+  let dims = Animation.({width=400; height=100}) in
+  let margin = Animation.({top=30; right=20;
+                           bottom=30; left=50}) in
   Lwt.bind
     (Lwt_js_events.onload ())
     (fun _ ->
-     let more_about_test_efficiency, more_about_cda = false, false in
-     let r, f = React.S.create {more_about_test_efficiency; more_about_cda} in
+     let more_about_test_efficiency,
+         more_about_cda,
+         animation = false, false, create_animation
+                                     1.0
+                                     3.5
+                                     0.01 dims margin in
+     let r, f = React.S.create {more_about_test_efficiency; more_about_cda;
+                                animation} in
      let content = get_element_by_id "content" in
      let under_content = view (r, f) in
      let () =

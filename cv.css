@@ -13,6 +13,13 @@
     border-bottom: 1px;
 }
 
+line {
+    fill: none;
+    stroke: #337ab7;
+    stroke-width: 3;
+    shape-rendering: crispEdges;
+}
+
 .picture {
     width: 150px;
     height: auto;
