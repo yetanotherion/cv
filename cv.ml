@@ -273,7 +273,7 @@ let compute_test_efficiency_content f model =
                                'fast_revert' should be used \
                                over the 'wait for the test result \
                                before integration' strategy ";
-                       pcdata "(+25% on integration speed)."]]];
+                       pcdata "(+13% on integration speed)."]]];
            li [strong [pcdata "Implementation"];
                pcdata ": ";
                hyperlink "https://www.python.org/"
@@ -534,7 +534,7 @@ let range start_idx end_idx =
   in
   _range [] start_idx end_idx
 
-let create_animation animation_duration seconds_to_read_text sleep dims margin =
+let create_animation animation_duration time_per_letter sleep dims margin =
   let open Animation in
   let line_length = dims.width - margin.left in
   let date_origin = 2004 in
@@ -590,27 +590,30 @@ let create_animation animation_duration seconds_to_read_text sleep dims margin =
                                   new_elt :: accum)
                                  [] (range 0 (int_of_float number_points)) in
   let last = List.hd animation in
-  let number_points = seconds_to_read_text /. sleep in
+  let clocks_per_letter = int_of_float (time_per_letter /. sleep) in
   let create_msg_text msg =
     let num_letters = String.length msg in
-    let each_points = (int_of_float number_points) / num_letters in
     fun idx ->
-    let msg_len = min (idx / each_points) num_letters in
+    let msg_len = min (idx / clocks_per_letter) num_letters in
     create_text 0.0 0.0 (String.sub msg 0 msg_len)
   in
   let messages =
     ["The source code was lost somewhere in the net.";
-     "(Github didn't exist yet :S).";
-     "Please find above a link to an article (in french)."]
+     "(Github didn't exist yet :S)";
+     "Long story short, Uberlogger is 'open lost source' :).";
+     "Please find above a link to an article (in french).";
+     "Have a good day !"
+    ]
   in
   let make_msg_animation msg =
     let f = create_msg_text msg in
+    let number_points = clocks_per_letter * ((String.length msg) + 20) in
     List.rev (List.fold_left (fun accum idx ->
                               let new_elt =
                                 {last with msg=Some (f idx)}
                               in
                               new_elt :: accum)
-                             [] (range 0 (int_of_float number_points)))
+                             [] (range 0 number_points))
   in
   let flatten ll = List.fold_left (fun accum l -> accum @ l) [] ll in
   Animation.create dims margin sleep ((List.rev animation) @
@@ -619,7 +622,7 @@ let create_animation animation_duration seconds_to_read_text sleep dims margin =
                                               make_msg_animation
                                               messages)))
 let _ =
-  let dims = Animation.({width=400; height=100}) in
+  let dims = Animation.({width=450; height=100}) in
   let margin = Animation.({top=30; right=20;
                            bottom=30; left=50}) in
   Lwt.bind
@@ -629,7 +632,7 @@ let _ =
          more_about_cda,
          animation = false, false, create_animation
                                      1.0
-                                     0.1
+                                     0.02
                                      0.01 dims margin in
      let r, f = React.S.create {more_about_test_efficiency; more_about_cda;
                                 animation} in
