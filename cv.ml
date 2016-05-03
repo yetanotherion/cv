@@ -169,7 +169,8 @@ let compute_rootkit_animation f model =
 
 
 let compute_open_source f model =
-  [pcdata "Open source contributions: ";
+  [strong [pcdata "Open source"];
+   pcdata " contributions: ";
    ul [li [strong [pcdata "Python: "];
            hyperlink "https://github.com/buildbot/buildbot"
                      "Buildbot";
@@ -610,7 +611,7 @@ let create_animation animation_duration time_per_letter sleep dims margin =
   in
   let make_msg_animation msg =
     let f = create_msg_text msg in
-    let number_points = clocks_per_letter * ((String.length msg) + 20) in
+    let number_points = clocks_per_letter * ((String.length msg) + 13) in
     List.rev (List.fold_left (fun accum idx ->
                               let new_elt =
                                 {last with msg=Some (f idx)}
