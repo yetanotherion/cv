@@ -227,30 +227,33 @@ let compute_information f model =
                           ~alt:"Picture not available"
                           ()]]
 
-let setup_handler f model div update_model =
+let setup_collapse_handler f model a update_model =
   let onclick () =
     let () = f (update_model model) in
     Lwt.return_unit
   in
   Lwt_js_events.(async (fun () -> clicks
-                                    (Tyxml_js.To_dom.of_div div)
+                                    (Tyxml_js.To_dom.of_a a)
                                     (fun _ _ -> onclick ())))
 
-let create_div collapsed =
+let create_collapse_link collapsed =
   let curr_class =
     if collapsed then
-      "arrow-down"
-    else "arrow-right"
+      "(less)"
+    else "(more)"
   in
-  div ~a:[a_class [curr_class]] []
+  hyperlink "#" curr_class
 
 let compute_test_efficiency_content f model =
-  let new_div = create_div model.more_about_test_efficiency in
-  let () = setup_handler f model new_div
-                         (fun model ->
-                          let new_state =
-                            not model.more_about_test_efficiency in
-                          {model with more_about_test_efficiency=new_state}) in
+  let new_collapse_link = create_collapse_link
+                            model.more_about_test_efficiency in
+  let () = setup_collapse_handler
+             f model
+             new_collapse_link
+             (fun model ->
+              let new_state =
+                not model.more_about_test_efficiency in
+              {model with more_about_test_efficiency=new_state}) in
   let other =
     if model.more_about_test_efficiency then
       [ul [
@@ -313,7 +316,7 @@ let compute_test_efficiency_content f model =
       ]
     else []
   in
-  new_div, other
+  new_collapse_link, other
 
 
 let compute_test_efficiency f model =
@@ -332,12 +335,12 @@ let compute_test_efficiency f model =
   ]
 
 let compute_cda_content f model =
-let new_div = create_div model.more_about_cda in
-  let () = setup_handler f model new_div
-                         (fun model ->
-                          let new_state =
-                            not model.more_about_cda in
-                          {model with more_about_cda=new_state}) in
+let new_collapse_link = create_collapse_link model.more_about_cda in
+  let () = setup_collapse_handler f model new_collapse_link
+                                  (fun model ->
+                                   let new_state =
+                                     not model.more_about_cda in
+                                   {model with more_about_cda=new_state}) in
   let other =
     if model.more_about_cda then
       [ul [
@@ -381,7 +384,7 @@ let new_div = create_div model.more_about_cda in
       ]
     else []
   in
-  new_div, other
+  new_collapse_link, other
 
 let compute_cda f model =
   let before, after = compute_cda_content f model in
