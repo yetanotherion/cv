@@ -32,6 +32,15 @@ module Animation = struct
               dims: dims;
               margin: margin}
 
+    let stopped_animation =
+      {state=`End;
+       draw=[];
+       sleep=0.0;
+       dims={width=0; height=0};
+       margin={top=0; bottom=0;
+               right=0; left=0}}
+
+
     let shift_draw t =
       match t.draw with
       | [] | _ :: []-> {t with state=`End}
@@ -41,17 +50,18 @@ module Animation = struct
 
     let curr_draw t = List.hd t.draw
     let start_animation t = {t with state=`Begin}
-    let create dims margin sleep to_draw =
+    let create dims margin sleep draw =
       {state=`None;
-       draw=to_draw;
-       sleep=sleep;
-       dims=dims;
-       margin=margin}
+       draw;
+       sleep;
+       dims;
+       margin}
 end
 
 type t = {more_about_test_efficiency: bool;
           more_about_cda: bool;
-          animation: Animation.t}
+          animation: Animation.t;
+          image_uri: string}
 
 type rs = t React.signal
 type rf = ?step:React.step -> t -> unit
@@ -219,12 +229,13 @@ let compute_contact () =
      [pcdata "Ion Alberdi"];
   ]
 
+
 let compute_information f model =
   full_col_div
     [quarter_col_div (compute_contact ());
      div ~a:[a_class ["col-sm-6"]] (compute_open_source f model);
      quarter_col_div [img ~a:[a_class ["picture"; "center-block"]]
-                          ~src:(uri_of_string "photo.jpg")
+                          ~src:(uri_of_string model.image_uri)
                           ~alt:"Picture not available"
                           ()]]
 
@@ -632,14 +643,25 @@ let _ =
   Lwt.bind
     (Lwt_js_events.onload ())
     (fun _ ->
+     let in_base64, animation =
+       try
+         Some (Js.to_string Js.Unsafe.global##.img),
+         Animation.stopped_animation
+       with _ -> None,
+                 (create_animation
+                    1.0
+                    0.02
+                    0.01 dims margin)
+     in
+     let image_uri =
+       match in_base64 with
+       | None -> "photo.jpg"
+       | Some x -> x
+     in
      let more_about_test_efficiency,
-         more_about_cda,
-         animation = false, false, create_animation
-                                     1.0
-                                     0.02
-                                     0.01 dims margin in
+         more_about_cda = false, false in
      let r, f = React.S.create {more_about_test_efficiency; more_about_cda;
-                                animation} in
+                                animation; image_uri} in
      let content = get_element_by_id "content" in
      let under_content = view (r, f) in
      let () =
