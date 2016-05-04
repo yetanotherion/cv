@@ -44,8 +44,6 @@ module Animation = struct
     let shift_draw t =
       match t.draw with
       | [] | _ :: []-> {t with state=`End}
-      (*| [] -> {t with state=`End}
-      | hd :: [] -> {t with draw=[hd]}*)
       | _ :: tl -> {t with draw=tl}
 
     let curr_draw t = List.hd t.draw
