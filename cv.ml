@@ -310,6 +310,9 @@ let compute_test_efficiency_content f model =
                hyperlink "https://www.cloudfoundry.org/"
                          "Cloudfoundry";
                pcdata ", ";
+               hyperlink "http://www.splunk.com/"
+                         "Splunk";
+               pcdata ", ";
                hyperlink "http://microservices.io/patterns/microservices.html"
                          "Micro service architecture";
                pcdata ", ";
@@ -446,7 +449,7 @@ let compute_laas () =
                  pcdata ")"]]];
    half_col_div_section
      [p [pcdata "Luth: a non-monolithic \
-                   firewall/IDS/IPS (";
+                   firewall/IDS/IPS for Linux (";
          hyperlink "https://www.researchgate.net/\
                     publication/221204865_Luth_\
                     Composing_and_Parallelizing_\
