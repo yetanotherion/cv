@@ -304,6 +304,9 @@ let compute_test_efficiency_content f model =
                hyperlink "http://spark.apache.org/"
                          "Spark";
                pcdata ", ";
+               hyperlink "http://www.scala-lang.org/"
+                         "Scala";
+               pcdata ", ";
                hyperlink "http://buildbot.net/"
                          "Buildbot";
                pcdata ", ";
