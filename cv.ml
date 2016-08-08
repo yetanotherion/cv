@@ -354,9 +354,9 @@ let compute_test_efficiency_content f model =
 let compute_test_efficiency f model =
   let before, after = compute_test_efficiency_content f model in
   let content =
-    [pcdata "Leading Test Scheduling Efficiency \
-                   in the Continuous \
-                   Integration engine of Intel inside Android software "]
+    [strong [pcdata "Leading Test Scheduling Efficiency "];
+     pcdata "in the Continuous \
+             Integration engine of Intel inside Android software "]
     @ (before :: after) in
   [half_col_div_section
      [p [strong [pcdata "2015 - nowadays"];
@@ -421,7 +421,8 @@ let new_collapse_link = create_collapse_link model.more_about_cda in
 let compute_cda f model =
   let before, after = compute_cda_content f model in
   let content =
-    [pcdata "Senior Software Developer in the Scrum team of the \
+    [strong [pcdata "Senior Software Developer"];
+     pcdata " in the Scrum team of the \
              Continuous Integration engine of Intel inside Android software "]
     @ (before :: after) in
   [half_col_div_section
@@ -467,8 +468,9 @@ let compute_laas () =
                            "ENSEIRB";
                  pcdata ")"]]];
    half_col_div_section
-     [p [pcdata "Luth: a non-monolithic \
-                   firewall/IDS/IPS for Linux (";
+     [p [strong [pcdata "Luth: "];
+         pcdata "a non-monolithic \
+                 firewall/IDS/IPS for Linux (";
          hyperlink "https://www.researchgate.net/\
                     publication/221204865_Luth_\
                     Composing_and_Parallelizing_\
