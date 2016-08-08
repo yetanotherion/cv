@@ -225,6 +225,12 @@ let compute_contact () =
    pcdata "Researchgate: ";
    a ~a:[a_href "https://www.researchgate.net/profile/Ion_Alberdi"]
      [pcdata "Ion Alberdi"];
+   br ();
+   pcdata "Certifications: ";
+   ul [
+        li [a ~a:[a_href "https://www.coursera.org/account/accomplishments/records/YPU5YECL2ELE"]
+              [pcdata "Machine Learning by Stanford University on Coursera."]]
+     ];
   ]
 
 
