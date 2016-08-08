@@ -212,21 +212,22 @@ let compute_open_source f model =
   ]
 
 let compute_contact () =
-  [pcdata "Tel: +33 6 75 86 27 27";
+  [strong [pcdata "Tel: "];
+   pcdata "+33 6 75 86 27 27";
    br ();
-   pcdata "Mail: ";
+   strong [pcdata "Mail: "];
    hyperlink "mailto:nolaridegi@gmail.com"
              "nolaridebi@gmail.com";
    br ();
-   pcdata "Github: ";
+   strong [pcdata "Github: "];
    hyperlink "https://github.com/yetanotherion"
              "yetanotherion";
    br ();
-   pcdata "Researchgate: ";
+   strong [pcdata "Researchgate: "];
    a ~a:[a_href "https://www.researchgate.net/profile/Ion_Alberdi"]
      [pcdata "Ion Alberdi"];
    br ();
-   pcdata "Certifications: ";
+   strong [pcdata "Certifications: "];
    ul [
         li [a ~a:[a_href "https://www.coursera.org/account/accomplishments/records/YPU5YECL2ELE"]
               [pcdata "Machine Learning by Stanford University on Coursera."]]
