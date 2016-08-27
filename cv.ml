@@ -47,6 +47,12 @@ module Animation = struct
       | _ :: tl -> {t with to_draw=tl}
 
     let curr_drawing t = List.hd t.to_draw
+
+    let drawing_in_progress t =
+      match t.state with
+      | `Begin -> true
+      | `End | `None -> false
+
     let start_animation t = {t with state=`Begin}
     let create dims margin sleep to_draw =
       {state=`None;
@@ -59,7 +65,8 @@ end
 type t = {more_about_test_efficiency: bool;
           more_about_cda: bool;
           animation: Animation.t;
-          image_uri: string}
+          image_uri: string;
+          timeout: unit Lwt.t option;}
 
 type rs = t React.signal
 type rf = ?step:React.step -> t -> unit
@@ -145,13 +152,6 @@ let create_svg f model =
                                        Tyxml_js.Svg.a_height
                                          (float_of_int dims.height, None)]
                                    [inside_g]) in
-  let () = Lwt_js_events.(async
-                            (fun () ->
-                             let%lwt () = Lwt_js.sleep animation.sleep in
-                             let () = f ({model with
-                                           animation=shift_to_draw animation}) in
-                             Lwt.return_unit)) in
-
   my_svg
 
 let compute_rootkit_animation f model =
@@ -554,11 +554,42 @@ let compute_bottom () =
                 compute_extra_curricular_activities ()]
 
 let compute_view f model =
+  let new_f model =
+    let new_timeout = match model.timeout with
+      | None -> None
+      | Some x ->
+         let () = Lwt.cancel x in
+         None
+    in
+    f {model with timeout=new_timeout}
+  in
+  let new_timeout =
+    Animation.(
+      if drawing_in_progress model.animation then
+        let waiter, wakener = Lwt.task () in
+        let _ = Lwt.bind waiter
+                          (fun () ->
+                           let () =
+                             new_f {model with
+                                     animation=shift_to_draw model.animation;
+                                     timeout=None} in
+                           Lwt.return_unit) in
+        let () = Lwt_js_events.(async
+                                (fun () ->
+                                 let%lwt () = Lwt_js.sleep model.animation.sleep in
+                                 let () = Lwt.wakeup wakener () in
+                                 Lwt.return_unit)) in
+      Some waiter
+    else None)
+  in
+  let model_with_timeout = {model with timeout = new_timeout} in
   div [compute_header ();
-       compute_information f model;
-       compute_profesional_experience f model;
+       compute_information new_f model_with_timeout;
+       compute_profesional_experience new_f model_with_timeout;
        compute_bottom ();
       ]
+
+
 
 let view ((r, f): rp) =
   let new_elt = React.S.map (compute_view f) r in
@@ -683,6 +714,7 @@ let _ =
      let more_about_test_efficiency,
          more_about_cda = false, false in
      let r, f = React.S.create {more_about_test_efficiency; more_about_cda;
+                                timeout=None;
                                 animation; image_uri} in
      let content = get_element_by_id "content" in
      let under_content = view (r, f) in
