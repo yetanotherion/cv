@@ -22,35 +22,35 @@ module Animation = struct
 
     type year_text = {year: text;
                       label: text}
-    type draw = {line_position: coord;
-                 uberlogger: year_text option;
-                 github: year_text option;
-                 msg: text option}
+    type drawing = {line_position: coord;
+                    uberlogger: year_text option;
+                    github: year_text option;
+                    msg: text option}
     type t = {state: state;
-              draw: draw list;
+              to_draw: drawing list;
               sleep: float;
               dims: dims;
               margin: margin}
 
     let stopped_animation =
       {state=`End;
-       draw=[];
+       to_draw=[];
        sleep=0.0;
        dims={width=0; height=0};
        margin={top=0; bottom=0;
                right=0; left=0}}
 
 
-    let shift_draw t =
-      match t.draw with
+    let shift_to_draw t =
+      match t.to_draw with
       | [] | _ :: []-> {t with state=`End}
-      | _ :: tl -> {t with draw=tl}
+      | _ :: tl -> {t with to_draw=tl}
 
-    let curr_draw t = List.hd t.draw
+    let curr_drawing t = List.hd t.to_draw
     let start_animation t = {t with state=`Begin}
-    let create dims margin sleep draw =
+    let create dims margin sleep to_draw =
       {state=`None;
-       draw;
+       to_draw;
        sleep;
        dims;
        margin}
@@ -92,7 +92,7 @@ let create_svg f model =
   let animation = model.animation in
   let dims, margin = animation.dims,
                      animation.margin in
-  let curr_draw = curr_draw animation in
+  let curr_drawing = curr_drawing animation in
   let create_line x1 x2 y1 y2 =
     Tyxml_js.Svg.(line ~a:[a_x1 (x1, None);
                            a_x2 (x2, None);
@@ -102,8 +102,8 @@ let create_svg f model =
                        [])
   in
   let lines =
-    let line_x = curr_draw.line_position.x in
-    let line_y = curr_draw.line_position.y in
+    let line_x = curr_drawing.line_position.x in
+    let line_y = curr_drawing.line_position.y in
     let arrow_delta = 7.0 in
     [create_line 0.0 line_x line_y line_y;
      create_line (line_x -. arrow_delta)
@@ -125,12 +125,12 @@ let create_svg f model =
     | Some x -> [create_text_svg x.year;
                  create_text_svg x.label;
                  create_line x.year.pos.x x.year.pos.x
-                             (curr_draw.line_position.y -. 4.0)
-                             (curr_draw.line_position.y +. 4.0)]
+                             (curr_drawing.line_position.y -. 4.0)
+                             (curr_drawing.line_position.y +. 4.0)]
   in
-  let uberlogger = create_milestone curr_draw.uberlogger in
-  let github = create_milestone curr_draw.github in
-  let msg = match curr_draw.msg with
+  let uberlogger = create_milestone curr_drawing.uberlogger in
+  let github = create_milestone curr_drawing.github in
+  let msg = match curr_drawing.msg with
     | None -> []
     | Some x -> [create_text_svg ~anchor:`Start x] in
   let under_g = lines @ uberlogger @ github @ msg in
@@ -149,7 +149,7 @@ let create_svg f model =
                             (fun () ->
                              let%lwt () = Lwt_js.sleep animation.sleep in
                              let () = f ({model with
-                                           animation=shift_draw animation}) in
+                                           animation=shift_to_draw animation}) in
                              Lwt.return_unit)) in
 
   my_svg
@@ -367,7 +367,7 @@ let compute_test_efficiency f model =
   ]
 
 let compute_cda_content f model =
-let new_collapse_link = create_collapse_link model.more_about_cda in
+  let new_collapse_link = create_collapse_link model.more_about_cda in
   let () = setup_collapse_handler f model new_collapse_link
                                   (fun model ->
                                    let new_state =
