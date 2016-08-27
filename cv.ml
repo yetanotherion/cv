@@ -617,6 +617,7 @@ let create_animation animation_duration time_per_letter sleep dims margin =
   let height = dims.height - margin.bottom in
   let height_f = float_of_int height in
   let line_height = height_f /. 2.0 in
+
   let create_milestone ?ymax:(ymax=height_f -. 5.0) year name =
     let x = compute_date_x year in
     let g = 9.91 in
@@ -702,9 +703,9 @@ let _ =
          Animation.stopped_animation
        with _ -> None,
                  (create_animation
-                    1.0
-                    0.02
-                    0.01 dims margin)
+                    5.0
+                    0.5
+                    0.5 dims margin)
      in
      let image_uri =
        match in_base64 with
