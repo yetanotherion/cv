@@ -22,7 +22,7 @@ module Animation = struct
 
     type year_text = {year: text;
                       label: text}
-    type drawing = {line_position: coord;
+    type drawing = {time_arrow_position: coord;
                     uberlogger: year_text option;
                     github: year_text option;
                     msg: text option}
@@ -109,16 +109,16 @@ let create_svg f model =
                        [])
   in
   let lines =
-    let line_x = curr_drawing.line_position.x in
-    let line_y = curr_drawing.line_position.y in
+    let time_arrow_x = curr_drawing.time_arrow_position.x in
+    let time_arrow_y = curr_drawing.time_arrow_position.y in
     let arrow_delta = 7.0 in
-    [create_line 0.0 line_x line_y line_y;
-     create_line (line_x -. arrow_delta)
-                 (line_x)
-                 (line_y +. arrow_delta) line_y;
-     create_line (line_x -. arrow_delta)
-                 line_x
-                 (line_y -. arrow_delta) line_y]
+    [create_line 0.0 time_arrow_x time_arrow_y time_arrow_y;
+     create_line (time_arrow_x -. arrow_delta)
+                 (time_arrow_x)
+                 (time_arrow_y +. arrow_delta) time_arrow_y;
+     create_line (time_arrow_x -. arrow_delta)
+                 time_arrow_x
+                 (time_arrow_y -. arrow_delta) time_arrow_y]
   in
   let create_text_svg ?anchor:(anchor=`Middle) txt =
     Tyxml_js.Svg.(text ~a:[a_text_anchor anchor;
@@ -132,8 +132,8 @@ let create_svg f model =
     | Some x -> [create_text_svg x.year;
                  create_text_svg x.label;
                  create_line x.year.pos.x x.year.pos.x
-                             (curr_drawing.line_position.y -. 4.0)
-                             (curr_drawing.line_position.y +. 4.0)]
+                             (curr_drawing.time_arrow_position.y -. 4.0)
+                             (curr_drawing.time_arrow_position.y +. 4.0)]
   in
   let uberlogger = create_milestone curr_drawing.uberlogger in
   let github = create_milestone curr_drawing.github in
@@ -604,30 +604,32 @@ let range start_idx end_idx =
 
 let create_animation animation_duration time_per_letter sleep dims margin =
   let open Animation in
-  let line_length = dims.width - margin.left in
+  let time_arrow_length = dims.width - margin.left in
   let date_origin = 2004 in
   let date_end = 2010 in
   let date_length = float_of_int (date_end - date_origin) in
   let compute_date_x date =
     let delta  = date - date_origin in
-    (float_of_int (delta * line_length)) /. date_length
+    (* scaling dates in x *)
+    (float_of_int (delta * time_arrow_length)) /. date_length
   in
   let number_points = animation_duration /. sleep in
-  let shift_at_each = (float_of_int line_length) /. number_points in
+  let shift_x_per_iteration = (float_of_int time_arrow_length) /. number_points in
   let height = dims.height - margin.bottom in
   let height_f = float_of_int height in
-  let line_height = height_f /. 2.0 in
+  let time_arrow_y = height_f /. 2.0 in
 
   let create_milestone ?ymax:(ymax=height_f -. 5.0) year name =
     let x = compute_date_x year in
     let g = 9.91 in
-    let y0 = line_height +. 6.0 in
+    let y0 = time_arrow_y +. 6.0 in
     let translate_in_y y = height_f -. y in
     let translated_y0 = translate_in_y y0 in
     let v0 = sqrt ((ymax -. y0) *. (g *. 2.0)) in
     let _y t = translate_in_y (y0 +. v0 *. t -. 0.5 *. g *. t *. t) in
     let y t =
       let res = _y (t /. 3.0) in (* slow-down a little *)
+      (* we don't go lower than y0 *)
       if res > translated_y0 then translated_y0
       else res
     in
@@ -635,11 +637,11 @@ let create_animation animation_duration time_per_letter sleep dims margin =
     let delta = position -. x in
     if delta < 0.0 then None
     else
-      let t = delta /. shift_at_each in
+      let t = delta /. shift_x_per_iteration in
       let ps = Printf.sprintf in
       Some {year=create_text
                    x
-                   (line_height +. 18.0) (ps "%d" year);
+                   (time_arrow_y +. 18.0) (ps "%d" year);
             label=create_text
                     x
                     (y t) name}
@@ -648,13 +650,13 @@ let create_animation animation_duration time_per_letter sleep dims margin =
   let github = create_milestone 2008 "Github" in
   let animation = List.fold_left (fun accum idx ->
                                   let new_position = (float_of_int idx) *.
-                                                       shift_at_each in
+                                                       shift_x_per_iteration in
                                   let new_elt =
-                                      {line_position=coord new_position
-                                                           line_height;
-                                       uberlogger=uberlogger new_position;
-                                       github=github new_position;
-                                       msg=None;
+                                    {time_arrow_position=coord new_position
+                                                               time_arrow_y;
+                                     uberlogger=uberlogger new_position;
+                                     github=github new_position;
+                                     msg=None;
                                       } in
                                   new_elt :: accum)
                                  [] (range 0 (int_of_float number_points)) in
@@ -676,7 +678,8 @@ let create_animation animation_duration time_per_letter sleep dims margin =
   in
   let make_msg_animation msg =
     let f = create_msg_text msg in
-    let number_points = clocks_per_letter * ((String.length msg) + 13) in
+    let wait_before_stopping = 13 in
+    let number_points = clocks_per_letter * ((String.length msg) + wait_before_stopping) in
     List.rev (List.fold_left (fun accum idx ->
                               let new_elt =
                                 {last with msg=Some (f idx)}
