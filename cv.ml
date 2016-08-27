@@ -576,7 +576,8 @@ let compute_view f model =
                            Lwt.return_unit) in
         let () = Lwt_js_events.(async
                                 (fun () ->
-                                 let%lwt () = Lwt_js.sleep model.animation.sleep in
+                                 let%lwt () = Lwt_js.sleep
+                                                model.animation.sleep in
                                  let () = Lwt.wakeup wakener () in
                                  Lwt.return_unit)) in
       Some waiter
@@ -588,8 +589,6 @@ let compute_view f model =
        compute_profesional_experience new_f model_with_timeout;
        compute_bottom ();
       ]
-
-
 
 let view ((r, f): rp) =
   let new_elt = React.S.map (compute_view f) r in
@@ -628,38 +627,70 @@ let create_animation animation_duration time_per_letter sleep dims margin =
     let v0 = sqrt ((ymax -. y0) *. (g *. 2.0)) in
     let _y t = translate_in_y (y0 +. v0 *. t -. 0.5 *. g *. t *. t) in
     let y t =
-      let res = _y (t /. 3.0) in (* slow-down a little *)
+      let res = _y t in
       (* we don't go lower than y0 *)
       if res > translated_y0 then translated_y0
       else res
     in
-    fun position ->
-    let delta = position -. x in
-    if delta < 0.0 then None
-    else
-      let t = delta /. shift_x_per_iteration in
-      let ps = Printf.sprintf in
-      Some {year=create_text
-                   x
-                   (time_arrow_y +. 18.0) (ps "%d" year);
-            label=create_text
-                    x
-                    (y t) name}
+    let t_end = 2.0 *. v0 /. g in
+    (* need to have enough points to reach t_end + x *)
+    let number_points_to_fall_down = (t_end +.
+                                        x /. shift_x_per_iteration) in
+    (* + 1.0 to get the ceil (and not stopping just before t_end) when
+       converting to int *)
+    let number_points_to_fall_down = number_points_to_fall_down +. 1.0 in
+    (* + 1.0 (again) as that number will be given to
+       range a b = [a, ..., b - 1] (see above) *)
+    let max_number_points_to_fall_down = number_points_to_fall_down +. 1.0 in
+    let f position =
+      let delta = position -. x in
+      if delta < 0.0 then None
+      else
+        let t = delta /. shift_x_per_iteration in
+        let ps = Printf.sprintf in
+        Some {year=create_text
+                     x
+                     (time_arrow_y +. 18.0) (ps "%d" year);
+              label=create_text
+                      x
+                      (y t) name}
+    in
+    (f, max_number_points_to_fall_down)
   in
-  let uberlogger = create_milestone 2005 "Uberlogger" in
-  let github = create_milestone 2008 "Github" in
+  let uberlogger, _ = create_milestone 2005 "Uberlogger" in
+  let github, github_end = create_milestone 2008 "Github" in
+  let number_points_to_put_milestones_down = int_of_float
+                                               (max github_end number_points) in
+  let time_arrow_end = int_of_float number_points in
   let animation = List.fold_left (fun accum idx ->
-                                  let new_position = (float_of_int idx) *.
-                                                       shift_x_per_iteration in
+                                  (* The time_arrow shouldn't go further
+                                     than time_arrow_end. However
+                                     the two milestones should observe idx-es
+                                     that go further, so that both text "fall"
+                                     until they reach their initia point.
+                                     We compute two different 'x'-es for
+                                     this reason *)
+                                  let new_arrow_idx = float_of_int
+                                                        (min idx
+                                                             time_arrow_end)
+                                  in
+                                  let new_arrow_x = new_arrow_idx *.
+                                                      shift_x_per_iteration in
+                                  let new_milestone_x = (float_of_int idx) *.
+                                                          shift_x_per_iteration
+                                  in
                                   let new_elt =
-                                    {time_arrow_position=coord new_position
-                                                               time_arrow_y;
-                                     uberlogger=uberlogger new_position;
-                                     github=github new_position;
-                                     msg=None;
+                                      {time_arrow_position=coord new_arrow_x
+                                                                 time_arrow_y;
+                                       uberlogger=uberlogger new_milestone_x;
+                                       github=github new_milestone_x;
+                                       msg=None;
                                       } in
                                   new_elt :: accum)
-                                 [] (range 0 (int_of_float number_points)) in
+                                 [] (range
+                                       0
+                                       (number_points_to_put_milestones_down))
+  in
   let last = List.hd animation in
   let clocks_per_letter = int_of_float (time_per_letter /. sleep) in
   let create_msg_text msg =
@@ -679,7 +710,8 @@ let create_animation animation_duration time_per_letter sleep dims margin =
   let make_msg_animation msg =
     let f = create_msg_text msg in
     let wait_before_stopping = 13 in
-    let number_points = clocks_per_letter * ((String.length msg) + wait_before_stopping) in
+    let number_points = clocks_per_letter * ((String.length msg) +
+                                               wait_before_stopping) in
     List.rev (List.fold_left (fun accum idx ->
                               let new_elt =
                                 {last with msg=Some (f idx)}
