@@ -603,6 +603,7 @@ let create_animation animation_duration time_per_letter sleep dims margin =
   let create_milestone ?ymax:(ymax=height_f -. 5.0) year name =
     let x = compute_date_x year in
     let g = 9.91 in
+    let g = g *. 0.3 in (* to slow down the fall *)
     let y0 = time_arrow_y +. 6.0 in
     let translate_in_y y = height_f -. y in
     let translated_y0 = translate_in_y y0 in
@@ -720,7 +721,7 @@ let _ =
          Animation.stopped_animation
        with _ -> None,
                  (create_animation
-                    1.0
+                    1.3
                     0.02
                     0.01 dims margin)
      in
