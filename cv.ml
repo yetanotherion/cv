@@ -720,9 +720,9 @@ let _ =
          Animation.stopped_animation
        with _ -> None,
                  (create_animation
-                    5.0
-                    0.5
-                    0.5 dims margin)
+                    1.0
+                    0.02
+                    0.01 dims margin)
      in
      let image_uri =
        match in_base64 with
