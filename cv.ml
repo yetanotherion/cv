@@ -62,15 +62,21 @@ module Animation = struct
        margin}
 end
 
-type t = {more_about_test_efficiency: bool;
-          more_about_cda: bool;
-          animation: Animation.t;
-          image_uri: string;
-          timeout: unit Lwt.t option;}
+type t_below = {more_about_test_efficiency: bool;
+                more_about_cda: bool}
+type t_above = {animation: Animation.t;
+                image_uri: string}
 
-type rs = t React.signal
-type rf = ?step:React.step -> t -> unit
-type rp = rs * rf
+
+module RTypes (T: sig type t end) = struct
+    type rs = T.t React.signal
+    type rf = ?step:React.step -> T.t -> unit
+    type rp = rs * rf
+  end
+
+module RBelow = RTypes(struct type t = t_below end)
+module RAbove = RTypes(struct type t = t_above end)
+
 open Tyxml_js.Html5
 
 let half_col_div ?other_cls:(ol=[]) x =
@@ -152,6 +158,12 @@ let create_svg f model =
                                        Tyxml_js.Svg.a_height
                                          (float_of_int dims.height, None)]
                                    [inside_g]) in
+  let () = Lwt_js_events.(async
+                            (fun () ->
+                             let%lwt () = Lwt_js.sleep animation.sleep in
+                             let () = f ({model with
+                                           animation=shift_to_draw animation}) in
+                             Lwt.return_unit)) in
   my_svg
 
 let compute_rootkit_animation f model =
@@ -553,47 +565,17 @@ let compute_bottom () =
   full_col_div [compute_languages ();
                 compute_extra_curricular_activities ()]
 
-let compute_view f model =
-  let new_f model =
-    let new_timeout = match model.timeout with
-      | None -> None
-      | Some x ->
-         let () = Lwt.cancel x in
-         None
-    in
-    f {model with timeout=new_timeout}
+let view ((r_below, f_below): RBelow.rp) ((r_above, f_above): RAbove.rp) =
+  let information = React.S.map (compute_information f_above) r_above in
+  let prof_experience = React.S.map (compute_profesional_experience f_below)
+                                    r_below in
+  let react_div_with_one_child c =
+    Tyxml_js.R.Html5.div (ReactiveData.RList.singleton_s c)
   in
-  let new_timeout =
-    Animation.(
-      if drawing_in_progress model.animation then
-        let waiter, wakener = Lwt.task () in
-        let _ = Lwt.bind waiter
-                          (fun () ->
-                           let () =
-                             new_f {model with
-                                     animation=shift_to_draw model.animation;
-                                     timeout=None} in
-                           Lwt.return_unit) in
-        let () = Lwt_js_events.(async
-                                (fun () ->
-                                 let%lwt () = Lwt_js.sleep
-                                                model.animation.sleep in
-                                 let () = Lwt.wakeup wakener () in
-                                 Lwt.return_unit)) in
-      Some waiter
-    else None)
-  in
-  let model_with_timeout = {model with timeout = new_timeout} in
-  div [compute_header ();
-       compute_information new_f model_with_timeout;
-       compute_profesional_experience new_f model_with_timeout;
-       compute_bottom ();
-      ]
+  let div_above =  react_div_with_one_child information in
+  let div_below = react_div_with_one_child prof_experience in
+  div [compute_header (); div_above; div_below; compute_bottom ()]
 
-let view ((r, f): rp) =
-  let new_elt = React.S.map (compute_view f) r in
-  Tyxml_js.R.Html5.(div (ReactiveData.RList.singleton_s
-                           new_elt))
 let range start_idx end_idx =
   let rec _range accum start_idx end_idx =
     if start_idx == end_idx then List.rev accum
@@ -749,11 +731,11 @@ let _ =
      in
      let more_about_test_efficiency,
          more_about_cda = false, false in
-     let r, f = React.S.create {more_about_test_efficiency; more_about_cda;
-                                timeout=None;
-                                animation; image_uri} in
+     let r_above, f_above = React.S.create {more_about_test_efficiency;
+                                            more_about_cda} in
+     let r_below, f_below = React.S.create {animation; image_uri} in
      let content = get_element_by_id "content" in
-     let under_content = view (r, f) in
+     let under_content = view (r_above, f_above) (r_below, f_below) in
      let () =
        Dom.appendChild
          content
