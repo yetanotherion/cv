@@ -22,48 +22,61 @@ module Animation = struct
 
     type year_text = {year: text;
                       label: text}
-    type draw = {line_position: coord;
-                 uberlogger: year_text option;
-                 github: year_text option;
-                 msg: text option}
+    type drawing = {time_arrow_position: coord;
+                    uberlogger: year_text option;
+                    github: year_text option;
+                    msg: text option}
     type t = {state: state;
-              draw: draw list;
+              to_draw: drawing list;
               sleep: float;
               dims: dims;
               margin: margin}
 
     let stopped_animation =
       {state=`End;
-       draw=[];
+       to_draw=[];
        sleep=0.0;
        dims={width=0; height=0};
        margin={top=0; bottom=0;
                right=0; left=0}}
 
 
-    let shift_draw t =
-      match t.draw with
+    let shift_to_draw t =
+      match t.to_draw with
       | [] | _ :: []-> {t with state=`End}
-      | _ :: tl -> {t with draw=tl}
+      | _ :: tl -> {t with to_draw=tl}
 
-    let curr_draw t = List.hd t.draw
+    let curr_drawing t = List.hd t.to_draw
+
+    let drawing_in_progress t =
+      match t.state with
+      | `Begin -> true
+      | `End | `None -> false
+
     let start_animation t = {t with state=`Begin}
-    let create dims margin sleep draw =
+    let create dims margin sleep to_draw =
       {state=`None;
-       draw;
+       to_draw;
        sleep;
        dims;
        margin}
 end
 
-type t = {more_about_test_efficiency: bool;
-          more_about_cda: bool;
-          animation: Animation.t;
-          image_uri: string}
+type t_below = {more_about_test_efficiency: bool;
+                more_about_cda: bool}
+type t_above = {animation: Animation.t;
+                image_uri: string}
 
-type rs = t React.signal
-type rf = ?step:React.step -> t -> unit
-type rp = rs * rf
+
+module RTypes (T: sig type t end) = struct
+    type rs = T.t React.signal
+    type rf = ?step:React.step -> T.t -> unit
+    type rp = rs * rf
+  end
+
+module RBelow = RTypes(struct type t = t_below end)
+module RAbove = RTypes(struct type t = t_above end)
+
 open Tyxml_js.Html5
 
 let half_col_div ?other_cls:(ol=[]) x =
@@ -92,7 +105,7 @@ let create_svg f model =
   let animation = model.animation in
   let dims, margin = animation.dims,
                      animation.margin in
-  let curr_draw = curr_draw animation in
+  let curr_drawing = curr_drawing animation in
   let create_line x1 x2 y1 y2 =
     Tyxml_js.Svg.(line ~a:[a_x1 (x1, None);
                            a_x2 (x2, None);
@@ -102,16 +115,16 @@ let create_svg f model =
                        [])
   in
   let lines =
-    let line_x = curr_draw.line_position.x in
-    let line_y = curr_draw.line_position.y in
+    let time_arrow_x = curr_drawing.time_arrow_position.x in
+    let time_arrow_y = curr_drawing.time_arrow_position.y in
     let arrow_delta = 7.0 in
-    [create_line 0.0 line_x line_y line_y;
-     create_line (line_x -. arrow_delta)
-                 (line_x)
-                 (line_y +. arrow_delta) line_y;
-     create_line (line_x -. arrow_delta)
-                 line_x
-                 (line_y -. arrow_delta) line_y]
+    [create_line 0.0 time_arrow_x time_arrow_y time_arrow_y;
+     create_line (time_arrow_x -. arrow_delta)
+                 (time_arrow_x)
+                 (time_arrow_y +. arrow_delta) time_arrow_y;
+     create_line (time_arrow_x -. arrow_delta)
+                 time_arrow_x
+                 (time_arrow_y -. arrow_delta) time_arrow_y]
   in
   let create_text_svg ?anchor:(anchor=`Middle) txt =
     Tyxml_js.Svg.(text ~a:[a_text_anchor anchor;
@@ -125,12 +138,12 @@ let create_svg f model =
     | Some x -> [create_text_svg x.year;
                  create_text_svg x.label;
                  create_line x.year.pos.x x.year.pos.x
-                             (curr_draw.line_position.y -. 4.0)
-                             (curr_draw.line_position.y +. 4.0)]
+                             (curr_drawing.time_arrow_position.y -. 4.0)
+                             (curr_drawing.time_arrow_position.y +. 4.0)]
   in
-  let uberlogger = create_milestone curr_draw.uberlogger in
-  let github = create_milestone curr_draw.github in
-  let msg = match curr_draw.msg with
+  let uberlogger = create_milestone curr_drawing.uberlogger in
+  let github = create_milestone curr_drawing.github in
+  let msg = match curr_drawing.msg with
     | None -> []
     | Some x -> [create_text_svg ~anchor:`Start x] in
   let under_g = lines @ uberlogger @ github @ msg in
@@ -149,9 +162,8 @@ let create_svg f model =
                             (fun () ->
                              let%lwt () = Lwt_js.sleep animation.sleep in
                              let () = f ({model with
-                                           animation=shift_draw animation}) in
+                                           animation=shift_to_draw animation}) in
                              Lwt.return_unit)) in
-
   my_svg
 
 let compute_rootkit_animation f model =
@@ -367,7 +379,7 @@ let compute_test_efficiency f model =
   ]
 
 let compute_cda_content f model =
-let new_collapse_link = create_collapse_link model.more_about_cda in
+  let new_collapse_link = create_collapse_link model.more_about_cda in
   let () = setup_collapse_handler f model new_collapse_link
                                   (fun model ->
                                    let new_state =
@@ -553,17 +565,17 @@ let compute_bottom () =
   full_col_div [compute_languages ();
                 compute_extra_curricular_activities ()]
 
-let compute_view f model =
-  div [compute_header ();
-       compute_information f model;
-       compute_profesional_experience f model;
-       compute_bottom ();
-      ]
+let view ((r_below, f_below): RBelow.rp) ((r_above, f_above): RAbove.rp) =
+  let information = React.S.map (compute_information f_above) r_above in
+  let prof_experience = React.S.map (compute_profesional_experience f_below)
+                                    r_below in
+  let react_div_with_one_child c =
+    Tyxml_js.R.Html5.div (ReactiveData.RList.singleton_s c)
+  in
+  let div_above =  react_div_with_one_child information in
+  let div_below = react_div_with_one_child prof_experience in
+  div [compute_header (); div_above; div_below; compute_bottom ()]
 
-let view ((r, f): rp) =
-  let new_elt = React.S.map (compute_view f) r in
-  Tyxml_js.R.Html5.(div (ReactiveData.RList.singleton_s
-                           new_elt))
 let range start_idx end_idx =
   let rec _range accum start_idx end_idx =
     if start_idx == end_idx then List.rev accum
@@ -573,59 +585,95 @@ let range start_idx end_idx =
 
 let create_animation animation_duration time_per_letter sleep dims margin =
   let open Animation in
-  let line_length = dims.width - margin.left in
+  let time_arrow_length = dims.width - margin.left in
   let date_origin = 2004 in
   let date_end = 2010 in
   let date_length = float_of_int (date_end - date_origin) in
   let compute_date_x date =
     let delta  = date - date_origin in
-    (float_of_int (delta * line_length)) /. date_length
+    (* scaling dates in x *)
+    (float_of_int (delta * time_arrow_length)) /. date_length
   in
   let number_points = animation_duration /. sleep in
-  let shift_at_each = (float_of_int line_length) /. number_points in
+  let shift_x_per_iteration = (float_of_int time_arrow_length) /. number_points in
   let height = dims.height - margin.bottom in
   let height_f = float_of_int height in
-  let line_height = height_f /. 2.0 in
+  let time_arrow_y = height_f /. 2.0 in
+
   let create_milestone ?ymax:(ymax=height_f -. 5.0) year name =
     let x = compute_date_x year in
     let g = 9.91 in
-    let y0 = line_height +. 6.0 in
+    let g = g *. 0.3 in (* to slow down the fall *)
+    let y0 = time_arrow_y +. 6.0 in
     let translate_in_y y = height_f -. y in
     let translated_y0 = translate_in_y y0 in
     let v0 = sqrt ((ymax -. y0) *. (g *. 2.0)) in
     let _y t = translate_in_y (y0 +. v0 *. t -. 0.5 *. g *. t *. t) in
     let y t =
-      let res = _y (t /. 3.0) in (* slow-down a little *)
+      let res = _y t in
+      (* we don't go lower than y0 *)
       if res > translated_y0 then translated_y0
       else res
     in
-    fun position ->
-    let delta = position -. x in
-    if delta < 0.0 then None
-    else
-      let t = delta /. shift_at_each in
-      let ps = Printf.sprintf in
-      Some {year=create_text
-                   x
-                   (line_height +. 18.0) (ps "%d" year);
-            label=create_text
-                    x
-                    (y t) name}
+    let t_end = 2.0 *. v0 /. g in
+    (* need to have enough points to reach t_end + x *)
+    let number_points_to_fall_down = (t_end +.
+                                        x /. shift_x_per_iteration) in
+    (* + 1.0 to get the ceil (and not stopping just before t_end) when
+       converting to int *)
+    let number_points_to_fall_down = number_points_to_fall_down +. 1.0 in
+    (* + 1.0 (again) as that number will be given to
+       range a b = [a, ..., b - 1] (see above) *)
+    let max_number_points_to_fall_down = number_points_to_fall_down +. 1.0 in
+    let f position =
+      let delta = position -. x in
+      if delta < 0.0 then None
+      else
+        let t = delta /. shift_x_per_iteration in
+        let ps = Printf.sprintf in
+        Some {year=create_text
+                     x
+                     (time_arrow_y +. 18.0) (ps "%d" year);
+              label=create_text
+                      x
+                      (y t) name}
+    in
+    (f, max_number_points_to_fall_down)
   in
-  let uberlogger = create_milestone 2005 "Uberlogger" in
-  let github = create_milestone 2008 "Github" in
+  let uberlogger, _ = create_milestone 2005 "Uberlogger" in
+  let github, github_end = create_milestone 2008 "Github" in
+  let number_points_to_put_milestones_down = int_of_float
+                                               (max github_end number_points) in
+  let time_arrow_end = int_of_float number_points in
   let animation = List.fold_left (fun accum idx ->
-                                  let new_position = (float_of_int idx) *.
-                                                       shift_at_each in
+                                  (* The time_arrow shouldn't go further
+                                     than time_arrow_end. However
+                                     the two milestones should observe idx-es
+                                     that go further, so that both text "fall"
+                                     until they reach their initia point.
+                                     We compute two different 'x'-es for
+                                     this reason *)
+                                  let new_arrow_idx = float_of_int
+                                                        (min idx
+                                                             time_arrow_end)
+                                  in
+                                  let new_arrow_x = new_arrow_idx *.
+                                                      shift_x_per_iteration in
+                                  let new_milestone_x = (float_of_int idx) *.
+                                                          shift_x_per_iteration
+                                  in
                                   let new_elt =
-                                      {line_position=coord new_position
-                                                           line_height;
-                                       uberlogger=uberlogger new_position;
-                                       github=github new_position;
+                                      {time_arrow_position=coord new_arrow_x
+                                                                 time_arrow_y;
+                                       uberlogger=uberlogger new_milestone_x;
+                                       github=github new_milestone_x;
                                        msg=None;
                                       } in
                                   new_elt :: accum)
-                                 [] (range 0 (int_of_float number_points)) in
+                                 [] (range
+                                       0
+                                       (number_points_to_put_milestones_down))
+  in
   let last = List.hd animation in
   let clocks_per_letter = int_of_float (time_per_letter /. sleep) in
   let create_msg_text msg =
@@ -644,7 +692,9 @@ let create_animation animation_duration time_per_letter sleep dims margin =
   in
   let make_msg_animation msg =
     let f = create_msg_text msg in
-    let number_points = clocks_per_letter * ((String.length msg) + 13) in
+    let wait_before_stopping = 13 in
+    let number_points = clocks_per_letter * ((String.length msg) +
+                                               wait_before_stopping) in
     List.rev (List.fold_left (fun accum idx ->
                               let new_elt =
                                 {last with msg=Some (f idx)}
@@ -671,7 +721,7 @@ let _ =
          Animation.stopped_animation
        with _ -> None,
                  (create_animation
-                    1.0
+                    1.3
                     0.02
                     0.01 dims margin)
      in
@@ -682,10 +732,11 @@ let _ =
      in
      let more_about_test_efficiency,
          more_about_cda = false, false in
-     let r, f = React.S.create {more_about_test_efficiency; more_about_cda;
-                                animation; image_uri} in
+     let r_above, f_above = React.S.create {more_about_test_efficiency;
+                                            more_about_cda} in
+     let r_below, f_below = React.S.create {animation; image_uri} in
      let content = get_element_by_id "content" in
-     let under_content = view (r, f) in
+     let under_content = view (r_above, f_above) (r_below, f_below) in
      let () =
        Dom.appendChild
          content
