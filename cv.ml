@@ -160,7 +160,17 @@ let create_svg f model =
                                    [inside_g]) in
   let () = Lwt_js_events.(async
                             (fun () ->
-                             let%lwt () = Lwt_js.sleep animation.sleep in
+                             let get_time () =
+                               let date = new%js Js.date_now in
+                               date##getTime
+                             in
+                             let start_time = get_time () in
+                             let rec wait_until_done () =
+                               let %lwt () = request_animation_frame () in
+                               if (get_time () -. start_time > animation.sleep) then Lwt.return_unit
+                               else wait_until_done ()
+                             in
+                             let%lwt () = wait_until_done() in
                              let () = f ({model with
                                            animation=shift_to_draw animation}) in
                              Lwt.return_unit)) in
