@@ -1,10 +1,6 @@
 PACKAGES=tyxml.functor react reactiveData js_of_ocaml js_of_ocaml.tyxml js_of_ocaml.syntax deriving lwt_ppx js_of_ocaml-ppx_deriving_json js_of_ocaml.ppx lwt js_of_ocaml-lwt
 
-all: cv.byte all_in_one.py
-	js_of_ocaml cv.byte
-	python all_in_one.py
-
-cv.byte: cv.ml
+all: cv.ml
 	ocamlfind ocamlc  \
 		${addprefix -package , ${PACKAGES}} \
 	        -linkpkg -o cv.byte cv.ml

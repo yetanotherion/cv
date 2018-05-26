@@ -1,7 +1,6 @@
 let log s = Firebug.console##log(Js.string s)
 
 let get_element_by_id id =
-  let () = log "get_element_by_id" in
   Js.Opt.get (Dom_html.document##getElementById(Js.string id))
              (fun () -> assert false)
 
@@ -721,21 +720,10 @@ let _ =
   Lwt.bind
     (Lwt_js_events.onload ())
     (fun _ ->
-     let in_base64, animation =
-       try
-         Some (Js.to_string Js.Unsafe.global##.img),
-         Animation.stopped_animation
-       with _ -> None,
-                 (create_animation
-                    1.3
-                    0.02
-                    0.01 dims margin)
-     in
-     let image_uri =
-       match in_base64 with
-       | None -> "photo.jpg"
-       | Some x -> x
-     in
+     let image_uri = "photo.jpg" in
+     let animation = create_animation 1.3
+                       0.02
+                       0.01 dims margin in
      let more_about_test_efficiency,
          more_about_cda = false, false in
      let r_above, f_above = React.S.create {more_about_test_efficiency;
