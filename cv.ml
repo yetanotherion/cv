@@ -789,7 +789,7 @@ let _ =
     (fun _ ->
      let image_uri = "photo.jpg" in
      let animation = create_animation 1.3
-                       0.02
+                       0.03
                        0.01 dims margin in
      let more_about_test_efficiency,
          more_about_cda,
