@@ -320,6 +320,8 @@ let compute_criteo_content f model =
                pcdata " ";
                hyperlink "https://www.gerritcodereview.com/" "Gerrit";
                pcdata " ";
+               hyperlink "https://www.sonatype.com/nexus-repository-sonatype" "Nexus";
+               pcdata " ";
                hyperlink "https://msdn.microsoft.com/en-us/library/dd393574.aspx" "MSBuild";
                pcdata " ";
                hyperlink "https://www.chef.io/" "Chef";
