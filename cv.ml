@@ -61,7 +61,8 @@ module Animation = struct
        margin}
 end
 
-type t_below = {more_about_test_efficiency: bool;
+type t_below = {more_about_criteo: bool;
+                more_about_test_efficiency: bool;
                 more_about_cda: bool}
 type t_above = {animation: Animation.t;
                 image_uri: string}
@@ -278,6 +279,57 @@ let create_collapse_link collapsed =
   in
   hyperlink "#" curr_class
 
+let compute_criteo_content f model =
+  let new_collapse_link = create_collapse_link
+                            model.more_about_criteo in
+  let () = setup_collapse_handler
+             f model
+             new_collapse_link
+             (fun model ->
+              let new_state =
+                not model.more_about_criteo in
+              {model with more_about_criteo=new_state}) in
+  let other =
+    if model.more_about_criteo then
+      [ul [
+           li [strong [pcdata "Online migration of a 1000+ maven multi module mono repo to gradle"];
+               pcdata ":";
+               ul [li [pcdata "Designer and main contributor of a maven to gradle converter (Java)."];
+                  ]
+             ];
+           li [strong [pcdata "Maintain / improve the software factory"];
+               pcdata ":";
+               ul [li [pcdata "Jenkins mono master (~ 150 slaves, ~ 5K jobs)"];
+                   li [pcdata "Gerrit"];
+                   li [pcdata "In house .NET end2end test sandboxes"];
+                   li [pcdata "In house .NET build tool (C#)"]
+                 ]
+             ];
+           li [strong [pcdata "Implementation "];
+               hyperlink "https://www.java.com/en/" "Java";
+               pcdata " ";
+               hyperlink "http://groovy-lang.org/" "Groovy";
+               pcdata " ";
+               hyperlink "https://jenkins.io/" "Jenkins";
+               pcdata " ";
+               hyperlink "https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/" "C#";
+               pcdata " ";
+               hyperlink "https://gradle.org/" "Gradle";
+               pcdata " ";
+               hyperlink "http://maven.apache.org/" "Maven";
+               pcdata " ";
+               hyperlink "https://www.gerritcodereview.com/" "Gerrit";
+               pcdata " ";
+               hyperlink "https://msdn.microsoft.com/en-us/library/dd393574.aspx" "MSBuild";
+               pcdata " ";
+               hyperlink "https://www.chef.io/" "Chef";
+               pcdata "."]
+         ]
+      ]
+    else []
+  in
+  new_collapse_link, other
+
 let compute_test_efficiency_content f model =
   let new_collapse_link = create_collapse_link
                             model.more_about_test_efficiency in
@@ -367,6 +419,20 @@ let compute_test_efficiency_content f model =
   in
   new_collapse_link, other
 
+let compute_criteo f model =
+  let before, after = compute_criteo_content f model in
+  let content =
+    [strong [pcdata "Senior Software Engineer"];
+     pcdata "  in R&D/Devtools, owners of .NET/JVM software factory "
+    ]
+    @ (before :: after) in
+  [half_col_div_section
+     [p [strong [pcdata "2016 (nov) - now"];
+         br ();
+         strong [hyperlink "https://www.criteo.com/"
+                           "Criteo / R&D"]]];
+   half_col_div_section content
+  ]
 
 let compute_test_efficiency f model =
   let before, after = compute_test_efficiency_content f model in
@@ -376,7 +442,7 @@ let compute_test_efficiency f model =
              Integration engine of Intel inside Android software "]
     @ (before :: after) in
   [half_col_div_section
-     [p [strong [pcdata "2015 - nowadays"];
+     [p [strong [pcdata "2015 - 2016 (nov)"];
          br ();
          strong [hyperlink "https://01.org/"
                            "INTEL / SSG / OTC"]]];
@@ -516,7 +582,8 @@ let compute_laas () =
 let compute_profesional_experience f model =
   let content = (List.map
                    (fun x -> full_col_div x)
-                   [compute_test_efficiency f model;
+                   [compute_criteo f model;
+                    compute_test_efficiency f model;
                     compute_cda f model;
                     compute_celad ();
                     compute_laas ()]) in
@@ -725,9 +792,11 @@ let _ =
                        0.02
                        0.01 dims margin in
      let more_about_test_efficiency,
-         more_about_cda = false, false in
+         more_about_cda,
+         more_about_criteo = false, false, false in
      let r_above, f_above = React.S.create {more_about_test_efficiency;
-                                            more_about_cda} in
+                                            more_about_cda;
+                                            more_about_criteo} in
      let r_below, f_below = React.S.create {animation; image_uri} in
      let content = get_element_by_id "content" in
      let under_content = view (r_above, f_above) (r_below, f_below) in
