@@ -377,12 +377,6 @@ let compute_test_efficiency_content f model =
                hyperlink "https://www.docker.com/"
                          "Docker";
                pcdata ", ";
-               hyperlink "http://spark.apache.org/"
-                         "Spark";
-               pcdata ", ";
-               hyperlink "http://www.scala-lang.org/"
-                         "Scala";
-               pcdata ", ";
                hyperlink "http://buildbot.net/"
                          "Buildbot";
                pcdata ", ";
@@ -397,15 +391,6 @@ let compute_test_efficiency_content f model =
                pcdata ", ";
                hyperlink "https://www.mysql.com/"
                          "MySQL";
-               pcdata ", ";
-               hyperlink "https://www.mongodb.com/"
-                         "MongoDB";
-               pcdata ", ";
-               hyperlink "http://cassandra.apache.org/"
-                         "Cassandra";
-               pcdata ", ";
-               hyperlink "https://www.rabbitmq.com/"
-                         "RabbitMQ";
                pcdata ", ";
                hyperlink "https://github.com/d3"
                          "d3";
