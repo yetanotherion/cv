@@ -147,12 +147,8 @@ let create_svg f model =
     | None -> []
     | Some x -> [create_text_svg ~anchor:`Start x] in
   let under_g = lines @ uberlogger @ github @ msg in
-  let inside_g = Tyxml_js.Svg.(g ~a:[a_transform
-                                       (Svg_types.Translate
-                                          (float_of_int margin.left,
-                                           Some (float_of_int margin.top)))]
-                                 under_g) in
-
+  let transform = `Translate (float_of_int margin.left, Some (float_of_int margin.top)) in
+  let inside_g = Tyxml_js.Svg.(g ~a:[a_transform [transform]] under_g) in
   let my_svg = Tyxml_js.Html5.(svg ~a:[Tyxml_js.Svg.a_width
                                          (float_of_int dims.width, None);
                                        Tyxml_js.Svg.a_height
