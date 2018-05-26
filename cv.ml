@@ -759,7 +759,7 @@ let create_animation animation_duration time_per_letter sleep dims margin =
      "(Github didn't exist yet :S)";
      "Long story short, Uberlogger is 'open lost source' :).";
      "Please find above a link to an article (in french).";
-     "Have a good day !"
+     "Have a good day!"
     ]
   in
   let make_msg_animation msg =
