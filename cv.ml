@@ -440,7 +440,7 @@ let compute_criteo f model =
      [p [strong [pcdata "2016 (nov) - now"];
          br ();
          strong [hyperlink "https://www.criteo.com/"
-                           "Criteo / R&D"]]];
+                           "CRITEO / R&D"]]];
    half_col_div_section content
   ]
 
