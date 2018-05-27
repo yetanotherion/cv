@@ -210,7 +210,7 @@ let compute_open_source f model =
            pcdata " ";
            hyperlink
              "https://github.com/yetanotherion/eliom_and_facebook"
-             "(src), ";
+             "(src). ";
            pcdata "Games to learn languages: ";
            hyperlink "http://www.languagames.com/hiztegia"
              "collaborative dictionary";
@@ -219,7 +219,7 @@ let compute_open_source f model =
              "animated verbs";
            pcdata " ";
            hyperlink "https://github.com/yetanotherion/hizkuntzak"
-             "(src)"];
+             "(src)."];
        li ([strong [pcdata "C"];
             pcdata ": backdoor for Linux 2.4 "] @
              (compute_rootkit_animation f model))
@@ -575,16 +575,13 @@ let compute_laas () =
                     framework_to_parallelize_and_\
                     compose_midpoint_inspection_devices"
                    "PhD";
-         pcdata ").";
-         br ();
+         pcdata "). ";
          pcdata "5 weeks in ";
          hyperlink "http://www.sfc.wide.ad.jp/IRL/"
                    "Jun Murai Lab.";
-         br ();
-         pcdata "Managed 3 interns: French, \
+         pcdata " Managed 3 interns: French, \
                  Bulgarian and Japanese master's \
-                 degree students.";
-         br ();]
+                 degree students.";]
        ]
   ]
 
