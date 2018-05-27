@@ -96,9 +96,8 @@ let full_col_div x = div ~a:[a_class ["col-sm-12"]] x
 let compute_header () =
   full_col_div
       [h2 ~a:[a_class ["name"]]
-           [strong [pcdata "Ion Alberdi, PhD"]];
-       h2 ~a:[a_class ["position"]]
-           [strong [pcdata "Software Engineer"]]]
+           [strong [pcdata "Ion Alberdi, Software Engineer (PhD)"]]]
+
 
 let create_svg f model =
   let open Animation in
