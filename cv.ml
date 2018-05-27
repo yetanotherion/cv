@@ -195,38 +195,63 @@ let compute_rootkit_animation f model =
 
 
 let compute_open_source f model =
-  [strong [pcdata "Open source"];
-   pcdata " contributions: ";
+  [strong [pcdata "Open source: "];
    ul [li [strong [pcdata "Python: "];
            hyperlink "https://github.com/buildbot/buildbot"
                      "Buildbot";
-          ];
-       li [strong [pcdata "OCaml"];
-           pcdata ": ";
-           ul
-             [
-               li [pcdata "Facebook events' audience analysis: ";
-                   hyperlink "https://vimeo.com/121533725"
-                             "demo";
-                   pcdata " ";
-                   hyperlink
-                     "https://github.com/yetanotherion/eliom_and_facebook"
-                     "(src)";
-                  ];
-               li [pcdata "Games to learn languages: ";
-                   hyperlink "http://www.languagames.com/hiztegia"
-                             "collaborative dictionary";
-                   pcdata ", ";
-                   hyperlink "http://www.languagames.com/eus_taulak"
-                             "animated verbs";
-                   pcdata " ";
-                   hyperlink "https://github.com/yetanotherion/hizkuntzak"
-                             "(src)";
-                  ]]];
+         ];
+       li [strong [pcdata "Java: "];
+           hyperlink "https://github.com/gradle/gradle"
+             "Gradle";
+         ];
+       li [strong [pcdata "OCaml: "];
+           pcdata "Facebook events' audience analysis: ";
+           hyperlink "https://vimeo.com/121533725"
+             "demo";
+           pcdata " ";
+           hyperlink
+             "https://github.com/yetanotherion/eliom_and_facebook"
+             "(src), ";
+           pcdata "Games to learn languages: ";
+           hyperlink "http://www.languagames.com/hiztegia"
+             "collaborative dictionary";
+           pcdata ", ";
+           hyperlink "http://www.languagames.com/eus_taulak"
+             "animated verbs";
+           pcdata " ";
+           hyperlink "https://github.com/yetanotherion/hizkuntzak"
+             "(src)"];
        li ([strong [pcdata "C"];
-            pcdata ": Uberlogger, backdoor for Linux 2.4 "] @
+            pcdata ": backdoor for Linux 2.4 "] @
              (compute_rootkit_animation f model))
-      ]
+     ]
+  ]
+
+let compute_certifications () =
+  [strong [pcdata "Coursera certifications: "];
+   ul [
+       li [pcdata "Machine learning ";
+           a ~a:[a_href "https://www.coursera.org/account/accomplishments/records/YPU5YECL2ELE"]
+             [pcdata "ML / Stanford, "];
+           a ~a:[a_href "https://www.coursera.org/account/accomplishments/records/J4M79NRMDBM4"]
+             [pcdata "Neural Networks / University of Toronto"]];
+       li [pcdata "Algorithms / Stanford ";
+           a ~a:[a_href "https://www.coursera.org/account/accomplishments/records/HK6Z3CBUF5PT"]
+             [pcdata "Part 1, "];
+           a ~a:[a_href "https://www.coursera.org/account/accomplishments/records/H4W48GP4ZU8W"]
+             [pcdata "Part 2"]
+         ];
+       li [pcdata "Scala / EPFL ";
+           a ~a:[a_href "https://www.coursera.org/account/accomplishments/verify/6DXSTF22SAPH"]
+             [pcdata "Design, "];
+           a ~a:[a_href "https://www.coursera.org/account/accomplishments/verify/REM84ARHBUJV"]
+             [pcdata "Principles, "];
+           a ~a:[a_href "https://www.coursera.org/account/accomplishments/verify/X64F3HBZSPSA"]
+             [pcdata "Parallel Programming"]];
+       li [pcdata "Cryptography / Stanford ";
+           a ~a:[a_href "https://www.coursera.org/account/accomplishments/verify/PE47EAY2L848"]
+             [pcdata "Part 1"]];
+     ]
   ]
 
 let compute_contact () =
@@ -245,22 +270,20 @@ let compute_contact () =
    a ~a:[a_href "https://www.researchgate.net/profile/Ion_Alberdi"]
      [pcdata "Ion Alberdi"];
    br ();
-   strong [pcdata "Certifications: "];
-   ul [
-        li [a ~a:[a_href "https://www.coursera.org/account/accomplishments/records/YPU5YECL2ELE"]
-              [pcdata "Machine Learning by Stanford University on Coursera."]]
-     ];
   ]
 
 
 let compute_information f model =
   full_col_div
     [quarter_col_div (compute_contact ());
-     div ~a:[a_class ["col-sm-6"]] (compute_open_source f model);
+     quarter_col_div (compute_open_source f model);
+     quarter_col_div (compute_certifications ());
      quarter_col_div [img ~a:[a_class ["picture"; "center-block"]]
                           ~src:(uri_of_string model.image_uri)
                           ~alt:"Picture not available"
                           ()]]
+
+
 
 let setup_collapse_handler f model a update_model =
   let onclick () =
@@ -306,23 +329,23 @@ let compute_criteo_content f model =
                  ]
              ];
            li [strong [pcdata "Implementation "];
-               hyperlink "https://www.java.com/en/" "Java";
+               hyperlink "https://www.java.com/en/" "Java, ";
                pcdata " ";
-               hyperlink "http://groovy-lang.org/" "Groovy";
+               hyperlink "http://groovy-lang.org/" "Groovy, ";
                pcdata " ";
-               hyperlink "https://jenkins.io/" "Jenkins";
+               hyperlink "https://jenkins.io/" "Jenkins, ";
                pcdata " ";
-               hyperlink "https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/" "C#";
+               hyperlink "https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/" "C#, ";
                pcdata " ";
-               hyperlink "https://gradle.org/" "Gradle";
+               hyperlink "https://gradle.org/" "Gradle, ";
                pcdata " ";
-               hyperlink "http://maven.apache.org/" "Maven";
+               hyperlink "http://maven.apache.org/" "Maven, ";
                pcdata " ";
-               hyperlink "https://www.gerritcodereview.com/" "Gerrit";
+               hyperlink "https://www.gerritcodereview.com/" "Gerrit, ";
                pcdata " ";
-               hyperlink "https://www.sonatype.com/nexus-repository-sonatype" "Nexus";
+               hyperlink "https://www.sonatype.com/nexus-repository-sonatype" "Nexus, ";
                pcdata " ";
-               hyperlink "https://msdn.microsoft.com/en-us/library/dd393574.aspx" "MSBuild";
+               hyperlink "https://msdn.microsoft.com/en-us/library/dd393574.aspx" "MSBuild, ";
                pcdata " ";
                hyperlink "https://www.chef.io/" "Chef";
                pcdata "."]
